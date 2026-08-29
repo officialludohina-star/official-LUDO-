@@ -108,6 +108,16 @@ const val DEFAULT_AVATAR_IMG = "https://i.postimg.cc/MK9xMWRc/user-icon.png"
 const val MODE_2P_ICON = "https://i.postimg.cc/QdzJnZpV/game-online-2p-uncheck.png"
 const val MODE_4P_ICON = "https://i.postimg.cc/FzhyJrQy/game-online-4p-uncheck.png"
 
+// Mode-select / bet-select screen ke icons (asal HTML se hoobahoo)
+const val TICK_ICON = "https://i.postimg.cc/MTxwDrHt/tick.webp"
+const val HOT_BADGE_ICON = "https://i.postimg.cc/90bQZHBN/fragment-Rule2.webp"
+const val BET_MINUS_ICON = "https://i.postimg.cc/8CFRktbs/regression-coin-min-check.webp"
+const val BET_PLUS_ICON = "https://i.postimg.cc/Bnn5kqLT/regression-coin-add-check.webp"
+const val COIN_ICON = "https://i.postimg.cc/sx3GWc56/coin.webp"
+const val GOLDEN_DICE_ICON = "https://i.postimg.cc/HLr8mn9K/icon-golden-dice.webp"
+
+val BET_OPTIONS = listOf(500, 2000, 10000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000)
+
 // Top bar + settings panel ke icons (asal HTML se hoobahoo)
 const val SETTINGS_ICON = "https://i.postimg.cc/y60TSpCD/system.webp"
 const val BET_INFO_ICON = "https://i.postimg.cc/9Qm12dSP/file-000000000d188208a6a8a0921cdc4517.png"
