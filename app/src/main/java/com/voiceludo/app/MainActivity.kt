@@ -14,6 +14,8 @@ import com.voiceludo.app.ui.ludo.LudoModeSelectScreen
 import com.voiceludo.app.ui.ludo.LudoGameScreen
 import com.voiceludo.app.ui.voiceparty.VoicePartyMainScreen
 import com.voiceludo.app.ui.voiceparty.MobileLoginScreen
+import com.voiceludo.app.ui.voiceparty.FacebookLoginScreen
+import com.voiceludo.app.ui.voiceparty.GmailLoginScreen
 import com.voiceludo.app.ui.voiceparty.YallaHomeScreen
 
 // Poori app ka navigation graph — Voice Party (login/home) aur Ludo (mode-select/game)
@@ -28,6 +30,8 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = "vp_main") {
                         composable("vp_main") { VoicePartyMainScreen(navController) }
                         composable("vp_mobile_login") { MobileLoginScreen(navController) }
+                        composable("vp_facebook_login") { FacebookLoginScreen(navController) }
+                        composable("vp_gmail_login") { GmailLoginScreen(navController) }
                         composable("vp_home") { YallaHomeScreen(navController) }
                         composable("ludo_mode_select") { LudoModeSelectScreen(navController) }
                         composable("ludo_game/{mode}/{players}") { backStackEntry ->

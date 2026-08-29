@@ -1,6 +1,7 @@
 package com.voiceludo.app.ui.ludo
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -44,6 +45,52 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int) {
         )
 
         Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+            var showSettings by remember { mutableStateOf(false) }
+            var soundOn by remember { mutableStateOf(true) }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AsyncImage(
+                        model = SETTINGS_ICON, contentDescription = "settings",
+                        modifier = Modifier.size(34.dp).clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.25f))
+                            .clickable { showSettings = !showSettings }
+                    )
+                    AsyncImage(
+                        model = BET_INFO_ICON, contentDescription = "bet info",
+                        modifier = Modifier.size(34.dp).clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.25f))
+                    )
+                }
+            }
+
+            if (showSettings) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        AsyncImage(
+                            model = SOUND_ICON, contentDescription = "sound",
+                            modifier = Modifier.size(36.dp).clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.25f))
+                                .clickable { soundOn = !soundOn }
+                        )
+                        Text(if (soundOn) "On" else "Off", color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        AsyncImage(
+                            model = EXIT_ICON, contentDescription = "exit",
+                            modifier = Modifier.size(36.dp).clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.25f))
+                                .clickable { navController.popBackStack() }
+                        )
+                        Text("Exit", color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 colorList.forEach { c -> PlayerBadge(c, state) }
             }

@@ -108,6 +108,12 @@ const val DEFAULT_AVATAR_IMG = "https://i.postimg.cc/MK9xMWRc/user-icon.png"
 const val MODE_2P_ICON = "https://i.postimg.cc/QdzJnZpV/game-online-2p-uncheck.png"
 const val MODE_4P_ICON = "https://i.postimg.cc/FzhyJrQy/game-online-4p-uncheck.png"
 
+// Top bar + settings panel ke icons (asal HTML se hoobahoo)
+const val SETTINGS_ICON = "https://i.postimg.cc/y60TSpCD/system.webp"
+const val BET_INFO_ICON = "https://i.postimg.cc/9Qm12dSP/file-000000000d188208a6a8a0921cdc4517.png"
+const val SOUND_ICON = "https://i.postimg.cc/mr5tk4rG/room-ic-input-sound.webp"
+const val EXIT_ICON = "https://i.postimg.cc/5NSyvLtn/btn-associate-exit.webp"
+
 fun ludoColorOf(c: LudoColor): androidx.compose.ui.graphics.Color = when (c) {
     LudoColor.RED -> androidx.compose.ui.graphics.Color(0xFFE53935)
     LudoColor.GREEN -> androidx.compose.ui.graphics.Color(0xFF2E7D32)

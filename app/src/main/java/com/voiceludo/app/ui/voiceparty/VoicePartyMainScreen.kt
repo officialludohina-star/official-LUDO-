@@ -23,7 +23,7 @@ fun VoicePartyMainScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0a2f1a))
+            .background(Color(0xFF0a1f15))
             .padding(24.dp),
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -41,7 +41,7 @@ fun VoicePartyMainScreen(navController: NavController) {
             icon = "f",
             gradient = Brush.verticalGradient(listOf(Color(0xFF7aa6ff), Color(0xFF3d5afe))),
             textColor = Color.White
-        ) { /* TODO: facebook flow screen */ }
+        ) { navController.navigate("vp_facebook_login") }
 
         Spacer(Modifier.height(12.dp))
 
@@ -59,7 +59,7 @@ fun VoicePartyMainScreen(navController: NavController) {
             icon = "\u2709\uFE0F",
             gradient = Brush.verticalGradient(listOf(Color(0xFF4cff9f), Color(0xFF0ab85a))),
             textColor = Color.White
-        ) { /* TODO: gmail flow screen */ }
+        ) { navController.navigate("vp_gmail_login") }
 
         Spacer(Modifier.height(24.dp))
     }
