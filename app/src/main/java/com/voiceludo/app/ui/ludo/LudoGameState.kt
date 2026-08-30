@@ -7,17 +7,21 @@ import kotlin.random.Random
 
 // pos: -1 = yard, 0..50 = ring (color ke apne start se relative), 51..55 = home-stretch,
 // 56 = finish (ghar pahunch gaya)
-class LudoGameState(val mode: LudoMode, val players: List<LudoColor>) {
+class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicOn: Boolean = false) {
 
     val tokens = mutableStateMapOf<LudoColor, MutableList<Int>>().apply {
         players.forEach { c -> put(c, mutableStateListOf(-1, -1, -1, -1)) }
     }
 
     var currentIdx = mutableStateOf(0)
-    var dice = mutableStateOf(1)
+    // Asal HTML jaisa hi — har player ka apna alag dice-box/number hota hai (gameDiceImg_${idx}),
+    // isliye ye ab per-color map hai, ek shared value nahi. Warna jab bhi koi bhi roll karta,
+    // saare players ke dice-box ek sath badal jate the (dono "roll ho rahe" jaise dikhte the).
+    val diceByColor = mutableStateMapOf<LudoColor, Int>().apply { players.forEach { put(it, 1) } }
     var diceRolled = mutableStateOf(false)
     // Asal HTML ke dice-roll-animation.gif jaisa hi rolling state — UI isay dekh kar
-    // gif dikhata hai, phir 700ms baad asal number reveal hota hai
+    // gif dikhata hai, phir 700ms baad asal number reveal hota hai. Sirf current player
+    // ka box hi rolling dikhata hai (isRolling ke sath currentColor bhi check hota hai).
     var isRolling = mutableStateOf(false)
     var movable = mutableStateListOf<Int>()
     var gameOver = mutableStateOf(false)
@@ -30,18 +34,49 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>) {
     val rankBadge = mutableStateMapOf<LudoColor, Int>() // color -> rank (1,2,3)
 
     val currentColor: LudoColor get() = players[currentIdx.value]
+    val dice: Int get() = diceByColor.getValue(currentColor)
 
     private val arrowTails = arrowTailSet()
 
+    // ---- Magic mode: asal HTML ke window.MAGIC_CELLS jaisa — 52 ring cells mein se
+    // 3 dice-bonus aur 3 rocket-bonus cells random chuni jati hain (arrow tail/head
+    // cells ke upar kabhi nahi aatin). Golden-dice cell par land karne se agli roll
+    // seedha 6 milti hai; rocket cell se token 1-15 ghar tak aage boost hota hai.
+    val magicDiceCells = mutableStateListOf<Int>()
+    val magicRocketCells = mutableStateListOf<Int>()
+    private val bonusSix = mutableMapOf<LudoColor, Boolean>()
+
+    init {
+        if (magicOn) {
+            val arrowRelated = arrowTails + players.map { arrowHeadFor(it) }.toSet()
+            val pool = (0..51).filterNot { it in arrowRelated }.shuffled()
+            magicDiceCells.addAll(pool.take(3))
+            magicRocketCells.addAll(pool.drop(3).take(3))
+        }
+    }
+
+    private fun relocateMagicCell(list: MutableList<Int>, usedIdx: Int) {
+        val used = (magicDiceCells + magicRocketCells).toSet()
+        val arrowRelated = arrowTails + players.map { arrowHeadFor(it) }.toSet()
+        val pool = (0..51).filterNot { it in used || it in arrowRelated }
+        if (pool.isEmpty()) return
+        val newIdx = pool.random()
+        val at = list.indexOf(usedIdx)
+        if (at != -1) list[at] = newIdx
+    }
+
     fun rollDice() {
         if (gameOver.value) return
-        dice.value = Random.nextInt(1, 7)
+        val forcedSix = bonusSix[currentColor] == true
+        val roll = if (forcedSix) 6 else Random.nextInt(1, 7)
+        if (forcedSix) bonusSix[currentColor] = false
+        diceByColor[currentColor] = roll
         diceRolled.value = true
         movable.clear()
-        movable.addAll(computeMovable(currentColor, dice.value))
+        movable.addAll(computeMovable(currentColor, roll))
         if (movable.isEmpty()) {
             // koi chaal nahi — turn khud aage badha do
-            advanceTurn(extra = dice.value == 6)
+            advanceTurn(extra = roll == 6)
         }
     }
 
@@ -70,14 +105,15 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>) {
         if (gameOver.value || !diceRolled.value) return
         val color = currentColor
         val t = tokens.getValue(color)
-        val dv = dice.value
+        val dv = diceByColor.getValue(color)
         var newPos = if (t[tokenIdx] == -1) 0 else t[tokenIdx] + dv
         if (newPos > 56) return
 
         var captured = false
+        var magicDiceBonus = false
 
         if (newPos in 0..50) {
-            val g = globalCellOf(color, newPos)
+            var g = globalCellOf(color, newPos)
 
             // Quick mode: color ka apna block cell aa jaye to seedha finish
             if (mode == LudoMode.QUICK && newPos == QUICK_BLOCK_REL) {
@@ -88,8 +124,24 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>) {
                 newPos = ARROW_HEAD_OFFSET
             }
 
+            // Magic mode: golden-dice cell -> agli roll seedha 6; rocket cell -> 1-15 ghar boost
+            if (magicOn && newPos in 0..50) {
+                g = globalCellOf(color, newPos)
+                if (g in magicDiceCells) {
+                    bonusSix[color] = true
+                    magicDiceBonus = true
+                    relocateMagicCell(magicDiceCells, g)
+                } else if (g in magicRocketCells) {
+                    val boost = Random.nextInt(1, 16) // 1 se 15 tak
+                    val maxAdd = minOf(boost, 56 - newPos)
+                    relocateMagicCell(magicRocketCells, g)
+                    if (maxAdd > 0) newPos += maxAdd
+                }
+            }
+
             // Capture check (safe cells par capture nahi hota)
-            if (newPos in 0..50 && g !in SAFE_SET.map { it }) {
+            g = globalCellOf(color, newPos)
+            if (newPos in 0..50 && g !in SAFE_SET) {
                 for (oc in players) {
                     if (oc == color) continue
                     val ot = tokens.getValue(oc)
@@ -111,7 +163,7 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>) {
         val wonThisColor = checkWin(color)
         if (gameOver.value) return
 
-        val extra = dv == 6 || captured
+        val extra = dv == 6 || captured || magicDiceBonus
         advanceTurn(extra)
     }
 

@@ -170,6 +170,36 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
             }
         }
 
+        // Magic mode: golden-dice aur rocket bonus cells (asal HTML ke #magicIconsLayer se
+        // hoobahoo — .magic-icon { width:6%; height:6% }, cell ke exact center par)
+        if (state.magicOn) {
+            fun magicCenterOffsets(g: Int, iconSizeDp: Dp): Pair<Dp, Dp> {
+                val rc = RING[g]
+                val cellLeftDp = boardSizeDp * (BOARD_INSET_PCT / 100f) + cellDp * rc.col
+                val cellTopDp = boardSizeDp * (BOARD_INSET_PCT / 100f) + cellDp * rc.row
+                val centerX = cellLeftDp + cellDp / 2
+                val centerY = cellTopDp + cellDp / 2
+                return (centerX - iconSizeDp / 2) to (centerY - iconSizeDp / 2)
+            }
+            val magicIconSizeDp = boardSizeDp * 0.06f
+            state.magicDiceCells.forEach { g ->
+                val (x, y) = magicCenterOffsets(g, magicIconSizeDp)
+                AsyncImage(
+                    model = MAGIC_DICE_ICON,
+                    contentDescription = "magic dice",
+                    modifier = Modifier.size(magicIconSizeDp).offset(x = x, y = y)
+                )
+            }
+            state.magicRocketCells.forEach { g ->
+                val (x, y) = magicCenterOffsets(g, magicIconSizeDp)
+                AsyncImage(
+                    model = MAGIC_ROCKET_ICON,
+                    contentDescription = "magic rocket",
+                    modifier = Modifier.size(magicIconSizeDp).offset(x = x, y = y)
+                )
+            }
+        }
+
         // ---- Pehla pass: sab tokens ko yard vs path mein baant kar, path walon ko
         // cell-key (HTML ke 'r'+g / color+'s'+pos jaisa) se group kar lete hain, taake
         // ek hi cell mein kitne tokens hain uske hisaab se STACK_CONFIG lagay (HTML jaisa).

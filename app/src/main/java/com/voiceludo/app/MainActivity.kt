@@ -34,10 +34,11 @@ class MainActivity : ComponentActivity() {
                         composable("vp_gmail_login") { GmailLoginScreen(navController) }
                         composable("vp_home") { YallaHomeScreen(navController) }
                         composable("ludo_mode_select") { LudoModeSelectScreen(navController) }
-                        composable("ludo_game/{mode}/{players}") { backStackEntry ->
+                        composable("ludo_game/{mode}/{players}/{magic}") { backStackEntry ->
                             val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
                             val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4
-                            LudoGameScreen(navController, mode = mode, players = players)
+                            val magic = backStackEntry.arguments?.getString("magic")?.toBooleanStrictOrNull() ?: false
+                            LudoGameScreen(navController, mode = mode, players = players, magic = magic)
                         }
                     }
                 }

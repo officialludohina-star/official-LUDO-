@@ -30,10 +30,10 @@ import kotlinx.coroutines.launch
 private enum class CornerPos { POS_TL, POS_TR, POS_BL, POS_BR }
 
 @Composable
-fun LudoGameScreen(navController: NavController, mode: String, players: Int) {
+fun LudoGameScreen(navController: NavController, mode: String, players: Int, magic: Boolean = false) {
     val ludoMode = LudoMode.valueOf(mode)
     val colorList = if (players == 4) PLAYER_COLORS_4P else PLAYER_COLORS_2P
-    val state = remember { LudoGameState(ludoMode, colorList) }
+    val state = remember { LudoGameState(ludoMode, colorList, magic) }
 
     // Bot turns: player index 0 hamesha "aap" hain, baaki players auto-play karte hain
     LaunchedEffect(state.currentIdx.value, state.gameOver.value) {
@@ -177,8 +177,10 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int) {
                 val dice = @Composable {
                     val scope = rememberCoroutineScope()
                     PlayerDiceBox(
-                        diceValue = state.dice.value,
-                        rolling = state.isRolling.value,
+                        // Har player apna alag stored dice-value dikhata hai (HTML jaisa) —
+                        // rolling-gif sirf usi color ke box mein chalti hai jiski abhi turn hai.
+                        diceValue = state.diceByColor[color] ?: 1,
+                        rolling = state.isRolling.value && color == state.currentColor,
                         isClickable = isSelf,
                         enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 && !state.diceRolled.value && !state.isRolling.value,
                         onClick = {
