@@ -90,7 +90,7 @@ private val HOME_COVERS = listOf(
 
 // Arrow mode ke 4 curved + 4 center-diagonal arrow overlays — asal HTML ke
 // left%/top%/width%/rotate() values se hoobahoo liye gaye hain
-private data class ArrowSpot(val leftPct: Float, val topPct: Float, val widthPct: Float, val rotateDeg: Float)
+data class ArrowSpot(val leftPct: Float, val topPct: Float, val widthPct: Float, val rotateDeg: Float)
 
 private const val ARROW_CURVED_ICON = "file:///android_asset/img/file-00000000dc8082118a379ac2ac711ac3.png"
 
