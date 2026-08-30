@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -20,8 +21,8 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// Signup background — user ka diya hua jungle/moon background
-private const val SIGNUP_BG = "https://i.postimg.cc/wxDN9QYp/bghome-1295ddb.png"
+// Same local jungle background as the login screen — loads instantly, no network needed
+private const val SIGNUP_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
 
 @Composable
 fun GmailSignupScreen(navController: NavController) {
@@ -35,17 +36,15 @@ fun GmailSignupScreen(navController: NavController) {
     var secondsLeft by remember { mutableStateOf(0) }
     var errorText by remember { mutableStateOf("") }
 
-    // Full-screen box with jungle background
     Box(modifier = Modifier.fillMaxSize()) {
-        // Jungle/moon background
+        // Jungle background — same asset as login screen
         AsyncImage(
             model = SIGNUP_BG,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
-        // Dark overlay taake form readable rahe
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)))
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -54,6 +53,7 @@ fun GmailSignupScreen(navController: NavController) {
             LoginHeaderBar("Sign Up", Color(0xFF0a7a42)) { navController.popBackStack() }
 
             LoginCard {
+                // Email field
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Box(
                         modifier = Modifier
@@ -69,48 +69,61 @@ fun GmailSignupScreen(navController: NavController) {
                 }
 
                 Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RealInput(code, { code = it; errorText = "" }, "Verification Code", modifier = Modifier.weight(1f))
+
+                // OTP row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    RealInput(
+                        code, { code = it; errorText = "" }, "Verification Code",
+                        modifier = Modifier.weight(1f)
+                    )
                     Button(
                         onClick = {
                             if (email.isBlank()) {
-                                errorText = "Email enter karein"
+                                errorText = "Please enter your email address."
                             } else {
                                 lastOtp = AccountStore.generateOtp()
                                 otpSent = true
                                 secondsLeft = 60
                                 scope.launch {
-                                    while (secondsLeft > 0) {
-                                        delay(1000)
-                                        secondsLeft--
-                                    }
+                                    while (secondsLeft > 0) { delay(1000); secondsLeft-- }
                                 }
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFd1d5db)),
                         shape = RoundedCornerShape(12.dp),
                         enabled = secondsLeft == 0
-                    ) { Text("Obtain", color = Color(0xFF222222), fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                    ) {
+                        Text(
+                            if (secondsLeft > 0) "${secondsLeft}s" else "Obtain",
+                            color = Color(0xFF222222), fontWeight = FontWeight.Bold, fontSize = 13.sp
+                        )
+                    }
                 }
 
                 if (otpSent) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        if (secondsLeft > 0) "Resend in ${secondsLeft}s" else "Resend available",
+                        "A verification code has been sent. Enter it above.",
                         color = Color(0xFF0a7a42), fontWeight = FontWeight.Bold, fontSize = 11.sp,
-                        modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )
+                    // Demo only — remove when real email backend is connected
                     Text(
-                        "Demo OTP: ${lastOtp ?: "1234"} (ya 1234 bhi chalega)",
+                        "Test code: ${lastOtp ?: "1234"} (or use 1234)",
                         color = Color(0xFF6b8f7a), fontSize = 10.sp,
-                        modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )
                 }
 
+                // Error message
                 if (errorText.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        errorText, color = Color(0xFFcc3333), fontSize = 11.sp,
+                        errorText,
+                        color = Color(0xFFcc3333), fontSize = 11.sp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFFfdecec), RoundedCornerShape(8.dp))
@@ -119,20 +132,27 @@ fun GmailSignupScreen(navController: NavController) {
                 }
 
                 Spacer(Modifier.height(20.dp))
+
+                // Confirm button
                 Button(
                     onClick = {
                         when {
-                            email.isBlank() -> errorText = "Email enter karein"
-                            !AccountStore.verifyOtp(code) -> errorText = "Wrong OTP, 1234 try karein"
+                            email.isBlank() ->
+                                errorText = "Please enter your email address."
+                            !AccountStore.verifyOtp(code) ->
+                                errorText = "Incorrect verification code. Please try again."
                             AccountStore.accountExists(context, "gmail", email) ->
-                                errorText = "Is email se account pehle se bana hua hai — Login karein"
-                            else -> navController.navigate("vp_set_password/gmail/$email")
+                                errorText = "An account with this email already exists. Please log in."
+                            else ->
+                                navController.navigate("vp_set_password/gmail/$email")
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0a7a42)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().height(46.dp)
-                ) { Text("Confirm", color = Color.White, fontWeight = FontWeight.Bold) }
+                ) {
+                    Text("Confirm", color = Color.White, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
