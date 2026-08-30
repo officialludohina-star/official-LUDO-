@@ -111,6 +111,24 @@ fun YallaHomeScreen(navController: NavController) {
 
         if (showLayoutPanel) {
             IconLayoutPanel(onClose = { showLayoutPanel = false })
+        } else {
+            // Alag, saaf-saaf dikhne wala button — settings gear ke ilawa, taake
+            // panel dhoondna mushkil na ho. Hamesha top-right corner mein rehta hai.
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 4.dp, end = 6.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFFFFCC33))
+                    .clickable { showLayoutPanel = true }
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("\u270F\uFE0F", fontSize = 12.sp)
+                Spacer(Modifier.width(4.dp))
+                Text("Icons edit karein", color = Color(0xFF3a2500), fontWeight = FontWeight.Black, fontSize = 11.sp)
+            }
         }
     }
 }

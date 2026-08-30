@@ -181,6 +181,9 @@ private fun BoxTokenWithGlow(
             contentDescription = contentDescription,
             modifier = Modifier
                 .matchParentSize()
+                .clip(CircleShape)
+                .background(ludoColorOf(tokenColor))
+                .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape)
                 .clickable(enabled = isMovable, onClick = onTap)
         )
     }
@@ -201,7 +204,10 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
             model = GAME_BOARD_IMG,
             contentDescription = "board",
             contentScale = ContentScale.FillBounds,
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .background(Color(0xFFE8D9B5)) // board image load na ho to bhi khaali kaali jagah na dikhe
         )
 
         // Board artwork ke andar bake hue home-yard tokens ko hide karte hain (z-index:1,

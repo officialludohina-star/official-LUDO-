@@ -107,18 +107,19 @@ val TOKEN_IMG: Map<LudoColor, String> = mapOf(
     LudoColor.RED to "file:///android_asset/img/piece-red.webp"
 )
 
-// Dice roll gif + 1-6 face icons — HTML se bilkul same remote URLs, kyunke
-// assets/img mein yeh 1.png..6.png files bundle nahi hain (missing thi, isliye
-// dice blurry/broken dikh raha tha). Ab HTML jaisa hi exact source use ho raha hai.
-const val DICE_ROLL_GIF = "https://i.postimg.cc/zv44tgMF/dice-roll-animation.gif"
+// Dice roll gif + 1-6 face icons — ab local assets se (download_images.sh inhe
+// download kar deti hai). Pehle yeh remote postimg.cc URLs the, jiski wajah se
+// game ke doraan (jab internet slow/band ho) dice ka number ya rolling-animation
+// kabhi load hi nahi hoti thi — is se "roll hui ya nahi" pata nahi chalta tha.
+const val DICE_ROLL_GIF = "file:///android_asset/img/dice-roll-animation.gif"
 
 val DICE_FACE_IMG: Map<Int, String> = mapOf(
-    1 to "https://i.postimg.cc/W3vGnbXh/1.png",
-    2 to "https://i.postimg.cc/Hx9QPDNn/2.png",
-    3 to "https://i.postimg.cc/kGjWqN9h/3.png",
-    4 to "https://i.postimg.cc/T2QVVxmV/4.png",
-    5 to "https://i.postimg.cc/tCThDct8/5.png",
-    6 to "https://i.postimg.cc/fTrYPv8S/6.png"
+    1 to "file:///android_asset/img/1.png",
+    2 to "file:///android_asset/img/2.png",
+    3 to "file:///android_asset/img/3.png",
+    4 to "file:///android_asset/img/4.png",
+    5 to "file:///android_asset/img/5.png",
+    6 to "file:///android_asset/img/6.png"
 )
 
 // 4-player mein 1st/2nd/3rd finish karne walon ki profile par yehi rank badge lagta hai
