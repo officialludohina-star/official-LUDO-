@@ -458,7 +458,16 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
         val reachedHome = newPos == 56
         checkWin(color)
 
-        return captured || arrowJumped || reachedHome || magicDiceBonus
+        // NOTE (asal HTML se hoobahoo match): golden-dice cell par land hona khud
+        // "extra turn" NAHI deta — sirf agli roll guaranteed 6 hoti hai (bonusSix[color]
+        // upar set ho chuka). Asal HTML ke finalizeAfterMove() mein bhi checkMagicCellHit()
+        // ka plain golden-dice-hit result hamesha {captured:false} deta hai, isliye
+        // magicDiceBonus ko yahan extra-turn ke return mein shamil NAHI karna — warna
+        // player ko turn khatam kiye bagair seedha ek aur move bhi mil jata (jo HTML
+        // mein nahi hota). Sirf rocket-boost ki landing par hone wala capture/arrow-jump
+        // hi extra turn deta hai (woh upar rocket-boost block mein "captured"/"arrowJumped"
+        // mein khud shamil ho chuka hota hai).
+        return captured || arrowJumped || reachedHome
     }
 
     // Diya gaya color jeet chuka ya nahi check karta hai. Quick mode: 1 token finish =

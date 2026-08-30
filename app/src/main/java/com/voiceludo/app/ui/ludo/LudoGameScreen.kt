@@ -194,42 +194,50 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 }
                 val dice = @Composable {
                     val scope = rememberCoroutineScope()
-                    Box {
-                        // Jis player ki abhi bari hai uske dice-box ke oopar ek green
-                        // arrow bounce karta hai (HTML jaisa) — taake turn kiski hai
-                        // yeh turant, saaf saaf nazar aaye.
-                        if (color == state.currentColor && !state.gameOver.value) {
-                            TurnArrow()
-                        }
-                        PlayerDiceBox(
-                            // Har player apna alag stored dice-value dikhata hai (HTML jaisa) —
-                            // rolling-gif sirf usi color ke box mein chalti hai jiski abhi turn hai.
-                            diceValue = state.diceByColor[color] ?: 1,
-                            rolling = state.isRolling.value && color == state.currentColor,
-                            isClickable = isSelf,
-                            // rollDice() khud rolling-animation, chain (6/capture/etc) sab
-                            // sambhalta hai — bas movable khali honi chahiye (koi move pending na ho)
-                            enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 &&
-                                state.movable.isEmpty() && !state.isRolling.value && !state.isMoving.value,
-                            onClick = { scope.launch { state.rollDice() } }
-                        )
-                        // Asal HTML ke gameDiceNum_${idx} badge jaisa — is turn mein ab tak
-                        // jama hue saved-rolls numbers ("6+4" jaisay) dice-box ke upar dikhata hai
-                        if (color == state.currentColor && state.savedRolls.isNotEmpty()) {
-                            Text(
-                                state.savedRolls.joinToString("+"),
-                                color = Color(0xFF5A3100),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .offset(y = (-8).dp)
-                                    .background(
-                                        Brush.verticalGradient(listOf(Color(0xFFFFEC66), Color(0xFFFFB300))),
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                    // Sirf jis player ki abhi bari hai uska hi dice-box dikhta hai —
+                    // baaki sab players ka dice box gayab rehta hai jab tak unki apni
+                    // bari na aa jaye (tab woh khud-b-khud reveal ho jata hai). Isi
+                    // wajah se doosron ka koi dice/arrow bhi dikhne ka sawal nahi rehta.
+                    if (color != state.currentColor) {
+                        Box(modifier = Modifier.size(50.dp))
+                    } else {
+                        Box {
+                            // Jis player ki abhi bari hai uske dice-box ke oopar ek green
+                            // arrow bounce karta hai (HTML jaisa) — taake turn kiski hai
+                            // yeh turant, saaf saaf nazar aaye.
+                            if (!state.gameOver.value) {
+                                TurnArrow()
+                            }
+                            PlayerDiceBox(
+                                // Har player apna alag stored dice-value dikhata hai (HTML jaisa) —
+                                // rolling-gif sirf usi color ke box mein chalti hai jiski abhi turn hai.
+                                diceValue = state.diceByColor[color] ?: 1,
+                                rolling = state.isRolling.value,
+                                isClickable = isSelf,
+                                // rollDice() khud rolling-animation, chain (6/capture/etc) sab
+                                // sambhalta hai — bas movable khali honi chahiye (koi move pending na ho)
+                                enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 &&
+                                    state.movable.isEmpty() && !state.isRolling.value && !state.isMoving.value,
+                                onClick = { scope.launch { state.rollDice() } }
                             )
+                            // Asal HTML ke gameDiceNum_${idx} badge jaisa — is turn mein ab tak
+                            // jama hue saved-rolls numbers ("6+4" jaisay) dice-box ke upar dikhata hai
+                            if (state.savedRolls.isNotEmpty()) {
+                                Text(
+                                    state.savedRolls.joinToString("+"),
+                                    color = Color(0xFF5A3100),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .offset(y = (-8).dp)
+                                        .background(
+                                            Brush.verticalGradient(listOf(Color(0xFFFFEC66), Color(0xFFFFB300))),
+                                            RoundedCornerShape(6.dp)
+                                        )
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                )
+                            }
                         }
                     }
                 }

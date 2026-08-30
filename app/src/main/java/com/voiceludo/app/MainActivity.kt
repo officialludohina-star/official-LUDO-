@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -30,8 +33,27 @@ import com.voiceludo.app.ui.voiceparty.YallaHomeScreen
 // Poori app ka navigation graph — Voice Party (login/home) aur Ludo (mode-select/game)
 // dono yahan se navigate hote hain, sab kuch native Kotlin/Compose mein.
 class MainActivity : ComponentActivity() {
+    // Poori app ko full-screen/immersive banata hai — status bar (battery, network,
+    // clock waghera) aur navigation bar dono hide ho jate hain, taake mobile par game
+    // bilkul edge-to-edge, "app jaisa" nazar aaye, browser/system chrome jaisa nahi.
+    // User swipe kar ke bars ko thori der ke liye wapis la sakta hai (transient), is
+    // liye onWindowFocusChanged mein dobara hide kar dete hain taake woh sticky rahe.
+    private fun applyImmersiveFullScreen() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyImmersiveFullScreen()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyImmersiveFullScreen()
 
         // Dice-roll GIF (aur koi bhi doosri animated GIF) ko sahi se animate karne ke liye
         // Coil ke default ImageLoader mein GIF decoder register karna zaroori hai — warna

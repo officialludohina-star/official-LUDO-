@@ -2,6 +2,7 @@ package com.voiceludo.app.ui.voiceparty
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,14 +22,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import kotlin.math.roundToInt
 
 // Asal HTML (#yallaHome) ka poora lobby screen — topbar (avatar/coins/gems/shop/settings),
 // league-rank locked cards, mode grid (2&4 Players / Team), bottom nav (Events/Battle/Chat/Social).
@@ -135,9 +139,12 @@ fun YallaHomeScreen(navController: NavController) {
 
 // Icons ko edar-udar (position) aur chota-bara (size +/-) karne ka panel. Har row
 // ek icon ke liye 4-directional move buttons + size − / + buttons + reset dikhata hai.
+// Panel ka card khud bhi upar-neechay drag ho sakta hai (panelDragY yaad rakhta hai)
+// — taake yeh screen ki puri jagah na ghere aur user isay jahan chahe wahan sarka sake.
 @Composable
 private fun IconLayoutPanel(onClose: () -> Unit) {
     val step = 4.dp
+    var panelDragY by remember { mutableStateOf(0f) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -147,6 +154,7 @@ private fun IconLayoutPanel(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
+                .offset { IntOffset(0, panelDragY.roundToInt()) }
                 .fillMaxWidth(0.9f)
                 .heightIn(max = 480.dp)
                 .background(Color(0xF20F1E37), RoundedCornerShape(16.dp))
@@ -154,11 +162,20 @@ private fun IconLayoutPanel(onClose: () -> Unit) {
                 .padding(14.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        // Sirf yahi header-row "drag handle" hai — upar-neechay ghaseet
+                        // kar poora panel apni jagah se hila sakte hain.
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            panelDragY += dragAmount.y
+                        }
+                    },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Icons ka layout", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                Text("Icons ka layout \u2195", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
                         "Reset all",
