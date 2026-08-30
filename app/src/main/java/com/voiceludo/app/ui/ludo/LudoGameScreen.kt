@@ -354,8 +354,9 @@ private fun PlayerProfileBox(name: String, color: LudoColor, rank: Int?) {
 // Current-turn indicator — dice-box ke bilkul oopar ek green bouncing arrow (neeche
 // ki taraf ishara karta hua), jis se pata chalta hai ke abhi kis ki bari hai. Asal
 // HTML ke turn-highlight jaisa hi concept, sirf yahan ek simple bouncing glyph hai.
+// BoxScope receiver zaroori hai kyunke Modifier.align() sirf Box ke andar hi milta hai.
 @Composable
-private fun TurnArrow() {
+private fun BoxScope.TurnArrow() {
     val infiniteTransition = rememberInfiniteTransition(label = "turnArrow")
     val bounce by infiniteTransition.animateFloat(
         initialValue = 0f,
