@@ -20,8 +20,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -188,13 +191,18 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
             )
         }
 
-        // Arrow mode: curved + center diagonal arrow overlays
+        // Arrow mode: curved + center diagonal arrow overlays — asal HTML ke
+        // ".board-arrow { filter: drop-shadow(...) brightness(0) ... }" jaisa hi:
+        // arrow image chahe original mein kisi bhi rang ki ho, yahan hamesha solid
+        // black silhouette + halka drop-shadow ke sath dikhti hai (size/position
+        // dono HTML ke % values se hoobahoo copy kiye gaye hain).
         if (state.mode == LudoMode.ARROW) {
             (CURVED_ARROW_SPOTS + CENTER_ARROW_SPOTS).forEach { spot ->
                 val iconSize = boardSizeDp * (spot.widthPct / 100f)
                 AsyncImage(
                     model = if (spot in CURVED_ARROW_SPOTS) ARROW_CURVED_ICON else ARROW_CENTER_ICON,
                     contentDescription = "arrow",
+                    colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
                     modifier = Modifier
                         .size(iconSize)
                         .offset(
@@ -202,6 +210,7 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                             y = boardSizeDp * (spot.topPct / 100f)
                         )
                         .graphicsLayer(rotationZ = spot.rotateDeg)
+                        .shadow(elevation = 2.dp, clip = false, ambientColor = Color.Black, spotColor = Color.Black)
                 )
             }
         }
@@ -300,8 +309,8 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     !state.isMoving.value &&
                     t.idx in state.movable
 
-                val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(220), label = "tokenX")
-                val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(220), label = "tokenY")
+                val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "tokenX")
+                val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(230), label = "tokenY")
 
                 BoxTokenWithGlow(
                     tokenSizeDp = tokenSizeDp,
@@ -334,8 +343,8 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     !state.isMoving.value &&
                     i in state.movable
 
-                val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(220), label = "yardTokenX")
-                val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(220), label = "yardTokenY")
+                val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "yardTokenX")
+                val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(230), label = "yardTokenY")
 
                 BoxTokenWithGlow(
                     tokenSizeDp = tokenSizeDp,

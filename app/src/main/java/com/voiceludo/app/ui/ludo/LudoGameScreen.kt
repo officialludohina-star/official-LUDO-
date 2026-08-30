@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -333,11 +334,15 @@ private fun PlayerDiceBox(diceValue: Int, rolling: Boolean, isClickable: Boolean
             .then(if (isClickable) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center
     ) {
+        // Asal HTML ke ".game-dice-box img.rolling { transform:scale(1.5); }" jaisa hi —
+        // rolling ke dauran dice image 1.5x badi dikhti hai
         AsyncImage(
             model = if (rolling) DICE_ROLL_GIF else DICE_FACE_IMG[diceValue],
             contentDescription = "dice",
             contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(scaleX = if (rolling) 1.5f else 1f, scaleY = if (rolling) 1.5f else 1f)
         )
     }
 }

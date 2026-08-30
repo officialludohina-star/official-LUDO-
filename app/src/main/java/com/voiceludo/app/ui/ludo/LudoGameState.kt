@@ -150,11 +150,14 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
         movable.clear()
 
         // ---- Step 1: cell-by-cell slide (yard se nikalna = 1 hi step, seedha start par) ----
+        // Asal HTML ke stepOnce() jaisa hi: har cell 230ms mein slide hoti hai, aur
+        // aakhri step ke baad capture/arrow checks se pehle 240ms ka thehrao hota hai.
         val steps = if (wasInYard) 1 else dv
         repeat(steps) {
             t[tokenIdx] = if (t[tokenIdx] == -1) 0 else t[tokenIdx] + 1
-            delay(180)
+            delay(230)
         }
+        delay(240)
 
         var newPos = t[tokenIdx]
         var captured = false
