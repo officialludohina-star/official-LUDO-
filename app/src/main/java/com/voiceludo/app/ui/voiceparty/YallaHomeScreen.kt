@@ -45,6 +45,7 @@ fun YallaHomeScreen(navController: NavController) {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .statusBarsPadding()
                     .padding(horizontal = 16.dp)
             ) {
                 TopBar()

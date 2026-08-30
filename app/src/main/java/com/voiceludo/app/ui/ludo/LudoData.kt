@@ -93,6 +93,8 @@ val TOKEN_IMG: Map<LudoColor, String> = mapOf(
     LudoColor.RED to "file:///android_asset/img/piece-red.webp"
 )
 
+const val DICE_ROLL_GIF = "file:///android_asset/img/dice-roll-animation.gif"
+
 val DICE_FACE_IMG: Map<Int, String> = mapOf(
     1 to "file:///android_asset/img/1.png",
     2 to "file:///android_asset/img/2.png",
@@ -129,6 +131,8 @@ const val BET_INFO_ICON = "file:///android_asset/img/file-000000000d188208a6a8a0
 const val SOUND_ICON = "file:///android_asset/img/room-ic-input-sound.webp"
 const val SOUND_OFF_ICON = "file:///android_asset/img/room-ic-input-sound-off.webp"
 const val EXIT_ICON = "file:///android_asset/img/btn-associate-exit.webp"
+// .game-top-icons-wrap ka background bar image (asal HTML se hoobahoo)
+const val TOP_BAR_BG_IMG = "file:///android_asset/img/IMG-20260825-WA0006.jpg"
 
 // Bet +/- button ke "disabled" (uncheck) variants — jab betIndex min/max par ho
 const val BET_MINUS_ICON_DISABLED = "file:///android_asset/img/regression-coin-min-uncheck.webp"

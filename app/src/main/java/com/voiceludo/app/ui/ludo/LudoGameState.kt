@@ -16,6 +16,9 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>) {
     var currentIdx = mutableStateOf(0)
     var dice = mutableStateOf(1)
     var diceRolled = mutableStateOf(false)
+    // Asal HTML ke dice-roll-animation.gif jaisa hi rolling state — UI isay dekh kar
+    // gif dikhata hai, phir 700ms baad asal number reveal hota hai
+    var isRolling = mutableStateOf(false)
     var movable = mutableStateListOf<Int>()
     var gameOver = mutableStateOf(false)
     var winnerText = mutableStateOf("")
