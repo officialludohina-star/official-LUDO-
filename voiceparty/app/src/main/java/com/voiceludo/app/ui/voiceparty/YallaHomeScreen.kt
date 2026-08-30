@@ -47,9 +47,15 @@ private const val NAV_GLOW_IMG = "file:///android_asset/img/selected-light-green
 private const val PILL_BG_IMG = "file:///android_asset/img/bg-add-coin.png"
 
 // ---- Home-page icon layout panel: har icon ki position (x/y offset) aur size
-// (scale) ko yahan se live edar-udar aur chota-bara kiya ja sakta hai (session ke
-// doraan; app restart hone par default position par wapis aa jate hain). ----
-private data class IconAdjust(val dx: Dp = 0.dp, val dy: Dp = 0.dp, val scale: Float = 1f)
+// (width % + height %, alag alag) yahan se live edar-udar aur chota-bara/lamba-
+// chaura kiya ja sakta hai (session ke doraan; app restart hone par default par
+// wapis aa jate hain). ----
+private data class IconAdjust(
+    val dx: Dp = 0.dp,
+    val dy: Dp = 0.dp,
+    val widthPercent: Int = 100,
+    val heightPercent: Int = 100
+)
 
 private object HomeLayoutStore {
     // key -> current adjustment. Compose state map hai isliye jahan bhi read hoga
@@ -71,32 +77,30 @@ private object HomeLayoutStore {
         adjust[key] = a.copy(dx = a.dx + ddx, dy = a.dy + ddy)
     }
 
-    fun resize(key: String, dScale: Float) {
+    // Har item ki width aur height (chaura-pan aur lambai) alag-alag, 1 se 200 (%)
+    // tak set ki ja sakti hai. 100 = asal (default) size.
+    fun setWidthPercent(key: String, percent: Int) {
         val a = get(key)
-        adjust[key] = a.copy(scale = (a.scale + dScale).coerceIn(0.01f, 2.0f))
+        adjust[key] = a.copy(widthPercent = percent.coerceIn(1, 200))
     }
 
-    // User seedha number type kar ke exact size set kar sake — 1 se 200 (%) tak.
-    // 100 = asal (default) size, 50 = aadha, 200 = double.
-    fun setScalePercent(key: String, percent: Int) {
+    fun setHeightPercent(key: String, percent: Int) {
         val a = get(key)
-        adjust[key] = a.copy(scale = (percent.coerceIn(1, 200) / 100f))
+        adjust[key] = a.copy(heightPercent = percent.coerceIn(1, 200))
     }
-
-    fun scalePercent(key: String): Int = (get(key).scale * 100).roundToInt()
 
     fun reset(key: String) { adjust.remove(key) }
     fun resetAll() { adjust.clear() }
 }
 
 // Modifier extension — kisi bhi icon/card par lagao, HomeLayoutStore ke mutabiq
-// offset + scale apply ho jata hai (edar-udar move + chota-bara resize).
+// offset + width%/height% apply ho jata hai (edar-udar move + chota-bara-lamba-chaura).
 @Composable
 private fun Modifier.homeLayout(key: String): Modifier {
     val a = HomeLayoutStore.get(key)
     return this
         .offset(x = a.dx, y = a.dy)
-        .graphicsLayer(scaleX = a.scale, scaleY = a.scale)
+        .graphicsLayer(scaleX = a.widthPercent / 100f, scaleY = a.heightPercent / 100f)
 }
 
 @Composable
@@ -157,7 +161,6 @@ fun YallaHomeScreen(navController: NavController) {
 // — taake yeh screen ki puri jagah na ghere aur user isay jahan chahe wahan sarka sake.
 @Composable
 private fun IconLayoutPanel(onClose: () -> Unit) {
-    val step = 4.dp
     var panelDragY by remember { mutableStateOf(0f) }
     Box(
         modifier = Modifier
@@ -169,11 +172,11 @@ private fun IconLayoutPanel(onClose: () -> Unit) {
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset { IntOffset(0, panelDragY.roundToInt()) }
-                .fillMaxWidth(0.9f)
-                .heightIn(max = 480.dp)
-                .background(Color(0xF20F1E37), RoundedCornerShape(16.dp))
+                .fillMaxWidth(0.94f)
+                .heightIn(max = 520.dp)
+                .background(Color(0xF20F1E37), RoundedCornerShape(14.dp))
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {} // andar tap se panel band na ho
-                .padding(14.dp)
+                .padding(10.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -189,62 +192,70 @@ private fun IconLayoutPanel(onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Icons ka layout \u2195", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Size (1-200) \u2195", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "Reset all",
                         color = Color(0xFFFFCC33),
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable { HomeLayoutStore.resetAll() }
                     )
                     Text(
-                        "Band karein \u2715",
+                        "\u2715",
                         color = Color.White,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable(onClick = onClose)
                     )
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
+            // Column headers — taake W aur H numbers ka matlab saaf ho.
+            Row(modifier = Modifier.fillMaxWidth().padding(end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                Text("W%", color = Color.White.copy(alpha = 0.55f), fontSize = 9.sp, modifier = Modifier.width(38.dp), textAlign = TextAlign.Center)
+                Text("H%", color = Color.White.copy(alpha = 0.55f), fontSize = 9.sp, modifier = Modifier.width(38.dp), textAlign = TextAlign.Center)
+                Spacer(Modifier.width(58.dp))
+            }
+            Spacer(Modifier.height(2.dp))
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 HomeLayoutStore.keys.forEach { (key, label) ->
-                    Column(
+                    // Ek hi compact row: naam, W number box, H number box, position
+                    // arrows (chote), aur reset — sab ek line mein taake panel chota
+                    // rahe aur saari values ek nazar mein parh sakein.
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                            .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                            LayoutBtn("\u25C0") { HomeLayoutStore.move(key, -step, 0.dp) }
-                            LayoutBtn("\u25B6") { HomeLayoutStore.move(key, step, 0.dp) }
-                            LayoutBtn("\u25B2") { HomeLayoutStore.move(key, 0.dp, -step) }
-                            LayoutBtn("\u25BC") { HomeLayoutStore.move(key, 0.dp, step) }
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                "\u21BA",
-                                color = Color(0xFFFFCC33),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Black,
-                                modifier = Modifier.clickable { HomeLayoutStore.reset(key) }
-                            )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text("Size:", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp, modifier = Modifier.weight(1f))
-                            LayoutBtn("\u2212") { HomeLayoutStore.resize(key, -0.08f) }
-                            Spacer(Modifier.width(6.dp))
-                            // Yahan direct number type kar ke exact size (1 se 200 tak, % mein)
-                            // set ki ja sakti hai — 100 matlab default size.
-                            SizeNumberField(key)
-                            Spacer(Modifier.width(6.dp))
-                            LayoutBtn("+") { HomeLayoutStore.resize(key, 0.08f) }
-                        }
+                        Text(
+                            label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f), maxLines = 1
+                        )
+                        SizeNumberField(
+                            value = HomeLayoutStore.get(key).widthPercent,
+                            onValue = { HomeLayoutStore.setWidthPercent(key, it) }
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        SizeNumberField(
+                            value = HomeLayoutStore.get(key).heightPercent,
+                            onValue = { HomeLayoutStore.setHeightPercent(key, it) }
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        MiniArrows(key)
+                        Text(
+                            "\u21BA",
+                            color = Color(0xFFFFCC33),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(start = 4.dp).clickable { HomeLayoutStore.reset(key) }
+                        )
                     }
                 }
             }
@@ -252,38 +263,51 @@ private fun IconLayoutPanel(onClose: () -> Unit) {
     }
 }
 
+// Position ke liye 4 chote arrow buttons, ek 2x2 grid mein — taake row ki chaurai
+// kam lage aur W/H number boxes ke liye jagah bache.
 @Composable
-private fun LayoutBtn(label: String, onClick: () -> Unit) {
+private fun MiniArrows(key: String) {
+    val step = 4.dp
+    Column {
+        Row {
+            MiniBtn("\u25B2") { HomeLayoutStore.move(key, 0.dp, -step) }
+            MiniBtn("\u25BC") { HomeLayoutStore.move(key, 0.dp, step) }
+        }
+        Row {
+            MiniBtn("\u25C0") { HomeLayoutStore.move(key, -step, 0.dp) }
+            MiniBtn("\u25B6") { HomeLayoutStore.move(key, step, 0.dp) }
+        }
+    }
+}
+
+@Composable
+private fun MiniBtn(label: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(24.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .size(16.dp)
+            .clip(RoundedCornerShape(3.dp))
             .background(Color.White.copy(alpha = 0.14f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Text(label, color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Black)
     }
 }
 
 // Size ke liye editable number box — user seedha "1" se "200" tak koi bhi
-// number type kar sakta hai (% mein), Enter/done dabate hi ya focus hatate hi
-// woh icon usi size ka ho jata hai. 100 = default size.
+// number type kar sakta hai (%), focus hatate/type karte hi turant apply ho
+// jata hai. 100 = default size.
 @Composable
-private fun SizeNumberField(key: String) {
-    var text by remember(key) { mutableStateOf(HomeLayoutStore.scalePercent(key).toString()) }
-
-    // HomeLayoutStore se scale bahar se bhi badal sakta hai (+/- buttons, reset),
-    // is liye jab woh badle to yeh field bhi sync ho jaye.
-    val currentPercent = HomeLayoutStore.scalePercent(key)
-    LaunchedEffect(currentPercent) { text = currentPercent.toString() }
+private fun SizeNumberField(value: Int, onValue: (Int) -> Unit) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    LaunchedEffect(value) { text = value.toString() }
 
     Box(
         modifier = Modifier
-            .width(44.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(Color.White.copy(alpha = 0.14f))
-            .padding(horizontal = 4.dp, vertical = 3.dp),
+            .width(36.dp)
+            .clip(RoundedCornerShape(5.dp))
+            .background(Color.White.copy(alpha = 0.16f))
+            .padding(horizontal = 2.dp, vertical = 3.dp),
         contentAlignment = Alignment.Center
     ) {
         BasicTextField(
@@ -291,12 +315,12 @@ private fun SizeNumberField(key: String) {
             onValueChange = { new ->
                 val digitsOnly = new.filter { it.isDigit() }.take(3)
                 text = digitsOnly
-                digitsOnly.toIntOrNull()?.let { HomeLayoutStore.setScalePercent(key, it) }
+                digitsOnly.toIntOrNull()?.let { onValue(it) }
             },
             singleLine = true,
             textStyle = TextStyle(
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center
             ),
@@ -304,7 +328,6 @@ private fun SizeNumberField(key: String) {
             modifier = Modifier.fillMaxWidth()
         )
     }
-    Text("%", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
 }
 
 @Composable
