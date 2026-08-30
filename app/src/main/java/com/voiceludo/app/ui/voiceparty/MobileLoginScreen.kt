@@ -27,7 +27,10 @@ fun MobileLoginScreen(navController: NavController) {
     var country by remember { mutableStateOf(COUNTRY_LIST.first()) } // default: Pakistan
     var countryMenuOpen by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0a2f1a))) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0a2f1a)),
+        verticalArrangement = Arrangement.Center
+    ) {
         LoginHeaderBar("Login", Color(0xFF0a7a42)) { navController.popBackStack() }
 
         LoginCard {

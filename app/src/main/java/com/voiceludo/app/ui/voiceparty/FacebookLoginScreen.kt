@@ -26,7 +26,10 @@ fun FacebookLoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0a2f1a))) {
+    Column(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0a2f1a)),
+        verticalArrangement = Arrangement.Center
+    ) {
         LoginHeaderBar("Facebook Login", Color(0xFF1877f2)) { navController.popBackStack() }
 
         LoginCard {

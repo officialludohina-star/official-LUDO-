@@ -227,7 +227,13 @@ private fun ModeTab(iconUrl: String, label: String, active: Boolean, onClick: ()
             .clickable(onClick = onClick)
             .padding(vertical = 10.dp, horizontal = 6.dp)
     ) {
-        AsyncImage(model = iconUrl, contentDescription = label, modifier = Modifier.fillMaxWidth().height(56.dp))
+        AsyncImage(
+            model = iconUrl, contentDescription = label,
+            modifier = Modifier
+                .padding(top = 8.dp) // icon ko thora nichy karne ke liye
+                .fillMaxWidth()
+                .height(56.dp)
+        )
         Text(label, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, modifier = Modifier.padding(top = 2.dp))
     }
 }
