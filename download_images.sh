@@ -3,7 +3,7 @@
 # app/src/main/assets/img/ mein daal deti hai. Achi internet speed
 # wali jagah (WiFi/friend's phone/cafe) par is folder (voiceparty/) ke andar chalayein:
 #   bash download_images.sh
-set -e
+set +e
 OUT="app/src/main/assets/img"
 mkdir -p "$OUT"
 curl -sL --retry 3 -o "$OUT/shop-cart.png" "https://i.postimg.cc/25MSqCsp/shop-cart.png"

@@ -26,6 +26,9 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: Download bundled app images
+        run: bash download_images.sh
+
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
 
