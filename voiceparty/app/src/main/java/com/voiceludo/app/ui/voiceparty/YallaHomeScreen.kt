@@ -122,6 +122,20 @@ fun YallaHomeScreen(navController: NavController) {
             BottomNav()
         }
 
+        // Build-check marker — sirf yeh dekh kar pata chal jayega ke naya code
+        // install hua ya nahi. Screen ke bilkul top-left corner mein rehta hai.
+        Text(
+            "BUILD-05 \u2014 dropdown panel",
+            color = Color(0xFF00ff88),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+        )
+
         if (showLayoutPanel) {
             IconLayoutPanel(onClose = { showLayoutPanel = false })
         } else {
