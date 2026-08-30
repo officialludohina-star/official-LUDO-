@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
@@ -126,6 +128,15 @@ private data class PathToken(
     val cellKey: String
 )
 
+// Asal HTML ke window.MOVABLE_GLOW jaisa hi — glow ring hamesha yellow nahi, balke
+// jis token ki bari hai uske apne color mein glow karta hai (green/yellow/blue/red)
+private val MOVABLE_GLOW: Map<LudoColor, Pair<Color, Color>> = mapOf(
+    LudoColor.GREEN to (Color(0xFF2FBF5A) to Color(0xD92FBF5A)),
+    LudoColor.YELLOW to (Color(0xFFFFD400) to Color(0xD9FFD400)),
+    LudoColor.BLUE to (Color(0xFF2A8AFF) to Color(0xD92A8AFF)),
+    LudoColor.RED to (Color(0xFFFF4A4A) to Color(0xD9FF4A4A))
+)
+
 // Asal HTML ke .game-token.movable jaisa hi — jis token ki bari ho (movable) uske
 // gird ek pulsing glow-ring dikhta hai (0.7s infinite pulse, scale 1 -> 1.18), taake
 // player ko turant pata chale ke ye token abhi chala sakta hai. Modifier.shadow() se
@@ -137,6 +148,7 @@ private fun BoxTokenWithGlow(
     animX: Dp,
     animY: Dp,
     isMovable: Boolean,
+    tokenColor: LudoColor,
     imageUrl: String?,
     contentDescription: String,
     onTap: () -> Unit
@@ -153,14 +165,13 @@ private fun BoxTokenWithGlow(
         contentAlignment = Alignment.Center
     ) {
         if (isMovable) {
+            val (glowStrong, glowSoft) = MOVABLE_GLOW.getValue(tokenColor)
             Box(
                 modifier = Modifier
                     .size(tokenSizeDp * 1.5f)
                     .graphicsLayer { scaleX = glowScale; scaleY = glowScale }
                     .background(
-                        Brush.radialGradient(
-                            listOf(Color(0xE6FFEC00), Color(0x33FFEC00), Color.Transparent)
-                        ),
+                        Brush.radialGradient(listOf(glowStrong, glowSoft.copy(alpha = 0.35f), Color.Transparent)),
                         CircleShape
                     )
             )
@@ -206,6 +217,35 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     )
                     .background(hc.color, CircleShape)
             )
+        }
+
+        // Asal HTML ke .yard-socket jaisa hoobahoo — har yard slot (chahe token ho
+        // ya khaali) ke neeche ek "dabba" (sunken/pressed-in gol chhed) dikhta hai:
+        // andar se halka andhera aur ek inner-shadow jaisa ring, taake lagay ke
+        // token ek gol khanay ke andar tika hua hai. Compose mein asal inset-shadow
+        // nahi hoti isliye radial-gradient se woh hi "dab" wala look banaya hai.
+        state.players.forEach { color ->
+            val density = LocalDensity.current
+            COLOR_META.getValue(color).yard.forEach { (yx, yy) ->
+                val leftPct = BOARD_INSET_PCT + (yx / 100f) * BOARD_SPAN_PCT + YARD_ADJUST
+                val topPct = BOARD_INSET_PCT + (yy / 100f) * BOARD_SPAN_PCT + YARD_ADJUST
+                val socketSizeDp = boardSizeDp * 0.065f
+                val centerX = boardSizeDp * (leftPct / 100f)
+                val centerY = boardSizeDp * (topPct / 100f)
+                Box(
+                    modifier = Modifier
+                        .size(socketSizeDp)
+                        .offset(x = centerX - socketSizeDp / 2, y = centerY - socketSizeDp / 2)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(Color(0x00000000), Color(0x2E000000), Color(0x59000000)),
+                                radius = with(density) { socketSizeDp.toPx() / 2f }
+                            ),
+                            CircleShape
+                        )
+                        .border(0.6.dp, Color(0x59000000), CircleShape)
+                )
+            }
         }
 
         // Arrow mode: curved + center diagonal arrow overlays — asal HTML ke
@@ -337,6 +377,7 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     animX = animX,
                     animY = animY,
                     isMovable = isMovable,
+                    tokenColor = t.color,
                     imageUrl = TOKEN_IMG[t.color],
                     contentDescription = "${t.color} token ${t.idx}",
                     onTap = { onTokenTap(t.color, t.idx) }
@@ -371,6 +412,7 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     animX = animX,
                     animY = animY,
                     isMovable = isMovable,
+                    tokenColor = color,
                     imageUrl = TOKEN_IMG[color],
                     contentDescription = "$color token $i",
                     onTap = { onTokenTap(color, i) }

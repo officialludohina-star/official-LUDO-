@@ -209,17 +209,31 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             }
         }
 
-        // Movable tokens ke liye instruction text (self ka turn ho aur chaal available ho)
-        if (state.currentIdx.value == 0 && state.movable.isNotEmpty() && !state.gameOver.value) {
+        // Neeche wala status/hint bar — asal HTML mein aisa nahi tha, lekin user ki
+        // request par add kiya: "Apki baari hai", "Token nikalein" (jab saare tokens
+        // yard mein hon aur 6 chahiye), "Chalne wala token tap karein", ya bot ka naam
+        // dikhata hai jab uski bari ho. Hamesha dikhta hai (sirf gameOver par gayab).
+        if (!state.gameOver.value) {
+            val hintText = when {
+                state.currentIdx.value != 0 -> "${state.currentColor.name.lowercase().replaceFirstChar { it.uppercase() }} soch raha hai\u2026"
+                state.rollChoice.value != null -> "Number chunein"
+                state.movable.isNotEmpty() -> {
+                    val allInYard = state.tokens.getValue(state.currentColor).all { it == -1 }
+                    if (allInYard) "Token nikalein" else "Chalne wala token tap karein"
+                }
+                state.isRolling.value -> "Dice roll ho rahi hai\u2026"
+                else -> "Apki baari hai \u2014 dice roll karein"
+            }
             Text(
-                "Chalne wala token tap karein",
+                hintText,
                 color = Color.White,
                 fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 20.dp)
-                    .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
 
