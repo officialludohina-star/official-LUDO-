@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -21,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // Asal HTML ke #ludoGameScreen jaisa hi — sab kuch (top icons, settings panel, board,
@@ -36,26 +36,12 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
     val colorList = if (players == 4) PLAYER_COLORS_4P else PLAYER_COLORS_2P
     val state = remember { LudoGameState(ludoMode, colorList, magic) }
 
-    // Bot turns: player index 0 hamesha "aap" hain, baaki players auto-play karte hain
-    LaunchedEffect(state.currentIdx.value, state.gameOver.value) {
-        if (state.gameOver.value) return@LaunchedEffect
-        if (state.currentIdx.value != 0) {
-            delay(600)
-            // Bot ka dice bhi asal HTML jaisa hi 700ms rolling-gif dikhata hai
-            state.isRolling.value = true
-            delay(700)
-            state.isRolling.value = false
-            state.rollDice()
-            delay(500)
-            if (state.movable.isNotEmpty()) {
-                state.moveToken(botPickToken(state, state.currentColor, state.movable, state.dice))
-            }
-        }
-    }
+    // Bot turns ab alag se manage nahi karne parte — state.rollDice()/advanceTurn khud
+    // hi (asal HTML ke maybeBotTurn jaisa) bot ki agli roll/chain automatically chala
+    // dete hain, chahe extra-turn (capture/6) kitni hi baar mile.
 
     var showSettings by remember { mutableStateOf(false) }
     var soundOn by remember { mutableStateOf(true) }
-    var showArrowTuning by remember { mutableStateOf(false) }
 
     // Asal HTML: window.COLOR_TO_POS — 4P mein har color apne board-quadrant ke
     // corner par hi apna profile+dice dikhata hai; 2P mein self hamesha bottom-left,
@@ -85,7 +71,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
         Box(modifier = Modifier.align(Alignment.Center).fillMaxWidth().aspectRatio(1f)) {
             LudoBoardCanvas(state) { _, idx ->
                 if (state.currentIdx.value == 0 && !state.isMoving.value) {
-                    boardScope.launch { state.moveToken(idx) }
+                    boardScope.launch { state.tapToken(idx) }
                 }
             }
         }
@@ -117,29 +103,6 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                     model = BET_INFO_ICON, contentDescription = "bet info",
                     modifier = Modifier.size(44.dp).clickable { /* bet info popup */ }
                 )
-                // Debug/tuning panel — sirf Arrow mode mein dikhta hai, taake Hacfs
-                // har black arrow ka size aur position live adjust kar sake
-                if (ludoMode == LudoMode.ARROW) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.18f))
-                            .clickable { showArrowTuning = !showArrowTuning },
-                        contentAlignment = Alignment.Center
-                    ) { Text("🏹", fontSize = 16.sp) }
-                }
-            }
-        }
-
-        // Arrow tuning panel — top-right corner, settings panel jaisa hi overlay
-        if (showArrowTuning) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-10).dp, y = 56.dp)
-            ) {
-                ArrowTuningPanel(onClose = { showArrowTuning = false })
             }
         }
 
@@ -204,23 +167,38 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 }
                 val dice = @Composable {
                     val scope = rememberCoroutineScope()
-                    PlayerDiceBox(
-                        // Har player apna alag stored dice-value dikhata hai (HTML jaisa) —
-                        // rolling-gif sirf usi color ke box mein chalti hai jiski abhi turn hai.
-                        diceValue = state.diceByColor[color] ?: 1,
-                        rolling = state.isRolling.value && color == state.currentColor,
-                        isClickable = isSelf,
-                        enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 && !state.diceRolled.value && !state.isRolling.value && !state.isMoving.value,
-                        onClick = {
-                            // Asal HTML jaisa hi: pehle 700ms rolling-gif animation, phir asal number
-                            state.isRolling.value = true
-                            scope.launch {
-                                delay(700)
-                                state.isRolling.value = false
-                                state.rollDice()
-                            }
+                    Box {
+                        PlayerDiceBox(
+                            // Har player apna alag stored dice-value dikhata hai (HTML jaisa) —
+                            // rolling-gif sirf usi color ke box mein chalti hai jiski abhi turn hai.
+                            diceValue = state.diceByColor[color] ?: 1,
+                            rolling = state.isRolling.value && color == state.currentColor,
+                            isClickable = isSelf,
+                            // rollDice() khud rolling-animation, chain (6/capture/etc) sab
+                            // sambhalta hai — bas movable khali honi chahiye (koi move pending na ho)
+                            enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 &&
+                                state.movable.isEmpty() && !state.isRolling.value && !state.isMoving.value,
+                            onClick = { scope.launch { state.rollDice() } }
+                        )
+                        // Asal HTML ke gameDiceNum_${idx} badge jaisa — is turn mein ab tak
+                        // jama hue saved-rolls numbers ("6+4" jaisay) dice-box ke upar dikhata hai
+                        if (color == state.currentColor && state.savedRolls.isNotEmpty()) {
+                            Text(
+                                state.savedRolls.joinToString("+"),
+                                color = Color(0xFF5A3100),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .offset(y = (-8).dp)
+                                    .background(
+                                        Brush.verticalGradient(listOf(Color(0xFFFFEC66), Color(0xFFFFB300))),
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
                         }
-                    )
+                    }
                 }
                 // Player 3 (pos-tr) aur Player 4 (pos-br) ke liye dice pehle, profile baad me
                 if (pos == CornerPos.POS_TR || pos == CornerPos.POS_BR) {
@@ -245,6 +223,35 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             )
         }
 
+        // Asal HTML ke #rollChoicePopup jaisa — jab ek movable token ke liye ek se
+        // zyada ALAG saved number (jaisay 6 aur 4 dono) legal hon, player yahan se
+        // chuney ke kaunsa number is token par apply karna hai.
+        state.rollChoice.value?.let { choice ->
+            val popupScope = rememberCoroutineScope()
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 90.dp)
+                    .background(Color(0xF20A1423), RoundedCornerShape(10.dp))
+                    .border(1.5.dp, Color(0xFFFFCC33), RoundedCornerShape(10.dp))
+                    .padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                choice.options.forEach { opt ->
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Brush.verticalGradient(listOf(Color(0xFFFFEC66), Color(0xFFFFB300))))
+                            .clickable { popupScope.launch { state.chooseRoll(opt) } },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("${opt.value}", color = Color(0xFF5A3100), fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    }
+                }
+            }
+        }
+
         if (state.gameOver.value) {
             Column(
                 modifier = Modifier.align(Alignment.Center),
@@ -259,33 +266,6 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 }
 
 private data class PosSpec(val baseX: Float, val baseY: Float, val translateX: Float, val translateY: Float, val alignEnd: Boolean)
-
-// Bot kaunsa token chalaye — asal HTML ke window.botPickToken se hoobahoo: 6 aaye to
-// pehle yard se token nikalo; warna jo chaal kisi opponent ko capture kar sake wo chuno;
-// warna sabse aage nikla hua (sabse zyada advanced) token chalao.
-private fun botPickToken(state: LudoGameState, color: LudoColor, movable: List<Int>, dice: Int): Int {
-    val t = state.tokens.getValue(color)
-    if (dice == 6) {
-        val yardIdx = movable.firstOrNull { t[it] == -1 }
-        if (yardIdx != null) return yardIdx
-    }
-    for (i in movable) {
-        val posNow = t[i]
-        if (posNow == -1) continue
-        val newPos = posNow + dice
-        if (newPos in 0..50) {
-            val g = state.globalCellOf(color, newPos)
-            if (g !in SAFE_SET) {
-                for (oc in state.players) {
-                    if (oc == color) continue
-                    val ot = state.tokens.getValue(oc)
-                    if (ot.any { it in 0..50 && state.globalCellOf(oc, it) == g }) return i
-                }
-            }
-        }
-    }
-    return movable.maxByOrNull { t[it] } ?: movable.first()
-}
 
 @Composable
 private fun SettingsOption(icon: String, label: String, onClick: () -> Unit) {
