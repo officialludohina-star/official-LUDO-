@@ -230,7 +230,7 @@ private fun ModeTab(iconUrl: String, label: String, active: Boolean, onClick: ()
         AsyncImage(
             model = iconUrl, contentDescription = label,
             modifier = Modifier
-                .padding(top = 8.dp) // icon ko thora nichy karne ke liye
+                .padding(top = 18.dp) // icon ko thora aur nichy karne ke liye (user ne mangi thi)
                 .fillMaxWidth()
                 .height(56.dp)
         )

@@ -1,6 +1,10 @@
 package com.voiceludo.app.ui.ludo
 
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,13 +12,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -100,6 +106,55 @@ private data class PathToken(
     val col: Int,
     val cellKey: String
 )
+
+// Asal HTML ke .game-token.movable jaisa hi — jis token ki bari ho (movable) uske
+// gird ek pulsing glow-ring dikhta hai (0.7s infinite pulse, scale 1 -> 1.18), taake
+// player ko turant pata chale ke ye token abhi chala sakta hai. Modifier.shadow() se
+// pehle bharosemand nahi tha (kai devices par colored halo dikhta hi nahi tha), isliye
+// ab yeh khud ek animated circle draw karta hai — hamesha reliably dikhta hai.
+@Composable
+private fun BoxTokenWithGlow(
+    tokenSizeDp: Dp,
+    animX: Dp,
+    animY: Dp,
+    isMovable: Boolean,
+    imageUrl: String?,
+    contentDescription: String,
+    onTap: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "tokenGlow")
+    val glowScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.28f,
+        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        label = "glowScale"
+    )
+    Box(
+        modifier = Modifier.size(tokenSizeDp).offset(x = animX, y = animY),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isMovable) {
+            Box(
+                modifier = Modifier
+                    .size(tokenSizeDp * 1.5f)
+                    .graphicsLayer { scaleX = glowScale; scaleY = glowScale }
+                    .background(
+                        Brush.radialGradient(
+                            listOf(Color(0xE6FFEC00), Color(0x33FFEC00), Color.Transparent)
+                        ),
+                        CircleShape
+                    )
+            )
+        }
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = contentDescription,
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(enabled = isMovable, onClick = onTap)
+        )
+    }
+}
 
 @Composable
 fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) {
@@ -243,25 +298,20 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
 
                 val isMovable = t.color == state.currentColor &&
                     state.currentIdx.value == 0 &&
+                    !state.isMoving.value &&
                     t.idx in state.movable
 
                 val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(220), label = "tokenX")
                 val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(220), label = "tokenY")
 
-                AsyncImage(
-                    model = TOKEN_IMG[t.color],
+                BoxTokenWithGlow(
+                    tokenSizeDp = tokenSizeDp,
+                    animX = animX,
+                    animY = animY,
+                    isMovable = isMovable,
+                    imageUrl = TOKEN_IMG[t.color],
                     contentDescription = "${t.color} token ${t.idx}",
-                    modifier = Modifier
-                        .size(tokenSizeDp)
-                        .offset(x = animX, y = animY)
-                        .then(
-                            if (isMovable) {
-                                Modifier
-                                    .shadow(6.dp, CircleShape, clip = false, ambientColor = Color(0xFFFFEC00), spotColor = Color(0xFFFFEC00))
-                                    .background(Color(0x33FFEC00), CircleShape)
-                            } else Modifier
-                        )
-                        .clickable(enabled = isMovable) { onTokenTap(t.color, t.idx) }
+                    onTap = { onTokenTap(t.color, t.idx) }
                 )
             }
         }
@@ -282,25 +332,20 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
 
                 val isMovable = color == state.currentColor &&
                     state.currentIdx.value == 0 &&
+                    !state.isMoving.value &&
                     i in state.movable
 
                 val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(220), label = "yardTokenX")
                 val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(220), label = "yardTokenY")
 
-                AsyncImage(
-                    model = TOKEN_IMG[color],
+                BoxTokenWithGlow(
+                    tokenSizeDp = tokenSizeDp,
+                    animX = animX,
+                    animY = animY,
+                    isMovable = isMovable,
+                    imageUrl = TOKEN_IMG[color],
                     contentDescription = "$color token $i",
-                    modifier = Modifier
-                        .size(tokenSizeDp)
-                        .offset(x = animX, y = animY)
-                        .then(
-                            if (isMovable) {
-                                Modifier
-                                    .shadow(6.dp, CircleShape, clip = false, ambientColor = Color(0xFFFFEC00), spotColor = Color(0xFFFFEC00))
-                                    .background(Color(0x33FFEC00), CircleShape)
-                            } else Modifier
-                        )
-                        .clickable(enabled = isMovable) { onTokenTap(color, i) }
+                    onTap = { onTokenTap(color, i) }
                 )
             }
         }

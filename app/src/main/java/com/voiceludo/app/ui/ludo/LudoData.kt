@@ -68,6 +68,20 @@ const val ARROW_HEAD_OFFSET = 5
 fun arrowTailSet(): Set<Int> = COLOR_META.values.map { (it.start + ARROW_TAIL_OFFSET) % 52 }.toSet()
 fun arrowHeadFor(color: LudoColor): Int = (COLOR_META.getValue(color).start + ARROW_HEAD_OFFSET) % 52
 
+// Arrow mode: yeh 4 "curved" arrow images (board ke bahar wale edge par) asal mein har
+// color ke apne EK "edge" cell ko point karte hain — SIRF usi color ka token yeh use kar
+// sakta hai. Is cell par land hote hi token seedha apni home-stretch ke pehle ghar (rel 51)
+// tak chala jata hai. Asal HTML ke window.ARROW_EDGE_OWNER se hoobahoo (missing tha, isi
+// wajah se curved arrows sirf decoration thay aur kuch karte nahi thay).
+val ARROW_EDGE_OWNER: Map<Int, LudoColor> = mapOf(
+    22 to LudoColor.BLUE,
+    35 to LudoColor.RED,
+    48 to LudoColor.GREEN,
+    9 to LudoColor.YELLOW
+)
+val ARROW_EDGE_SET: Set<Int> = ARROW_EDGE_OWNER.keys
+const val ARROW_EDGE_ENTRY_REL = 51
+
 // Quick mode: har color ka apna block cell (relative offset), jahan se sirf usi color ka
 // token guzar sakta hai — waha aa kar token seedha finish (56) ho jata hai.
 const val QUICK_BLOCK_REL = 46

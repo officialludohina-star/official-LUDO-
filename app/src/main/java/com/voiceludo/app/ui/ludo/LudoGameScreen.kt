@@ -47,7 +47,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             state.rollDice()
             delay(500)
             if (state.movable.isNotEmpty()) {
-                state.moveToken(state.movable.first())
+                state.moveToken(botPickToken(state, state.currentColor, state.movable, state.dice))
             }
         }
     }
@@ -79,9 +79,12 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 
         // .game-board-wrap: position:absolute; top:50%; left:50%; translate(-50%,-50%);
         // width:100vw; height:auto (square board image)
+        val boardScope = rememberCoroutineScope()
         Box(modifier = Modifier.align(Alignment.Center).fillMaxWidth().aspectRatio(1f)) {
             LudoBoardCanvas(state) { _, idx ->
-                if (state.currentIdx.value == 0) state.moveToken(idx)
+                if (state.currentIdx.value == 0 && !state.isMoving.value) {
+                    boardScope.launch { state.moveToken(idx) }
+                }
             }
         }
 
@@ -182,7 +185,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                         diceValue = state.diceByColor[color] ?: 1,
                         rolling = state.isRolling.value && color == state.currentColor,
                         isClickable = isSelf,
-                        enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 && !state.diceRolled.value && !state.isRolling.value,
+                        enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 && !state.diceRolled.value && !state.isRolling.value && !state.isMoving.value,
                         onClick = {
                             // Asal HTML jaisa hi: pehle 700ms rolling-gif animation, phir asal number
                             state.isRolling.value = true
@@ -231,6 +234,33 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 }
 
 private data class PosSpec(val baseX: Float, val baseY: Float, val translateX: Float, val translateY: Float, val alignEnd: Boolean)
+
+// Bot kaunsa token chalaye — asal HTML ke window.botPickToken se hoobahoo: 6 aaye to
+// pehle yard se token nikalo; warna jo chaal kisi opponent ko capture kar sake wo chuno;
+// warna sabse aage nikla hua (sabse zyada advanced) token chalao.
+private fun botPickToken(state: LudoGameState, color: LudoColor, movable: List<Int>, dice: Int): Int {
+    val t = state.tokens.getValue(color)
+    if (dice == 6) {
+        val yardIdx = movable.firstOrNull { t[it] == -1 }
+        if (yardIdx != null) return yardIdx
+    }
+    for (i in movable) {
+        val posNow = t[i]
+        if (posNow == -1) continue
+        val newPos = posNow + dice
+        if (newPos in 0..50) {
+            val g = state.globalCellOf(color, newPos)
+            if (g !in SAFE_SET) {
+                for (oc in state.players) {
+                    if (oc == color) continue
+                    val ot = state.tokens.getValue(oc)
+                    if (ot.any { it in 0..50 && state.globalCellOf(oc, it) == g }) return i
+                }
+            }
+        }
+    }
+    return movable.maxByOrNull { t[it] } ?: movable.first()
+}
 
 @Composable
 private fun SettingsOption(icon: String, label: String, onClick: () -> Unit) {

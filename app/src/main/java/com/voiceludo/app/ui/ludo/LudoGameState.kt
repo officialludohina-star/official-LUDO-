@@ -3,6 +3,7 @@ package com.voiceludo.app.ui.ludo
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateListOf
+import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 // pos: -1 = yard, 0..50 = ring (color ke apne start se relative), 51..55 = home-stretch,
@@ -23,6 +24,10 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
     // gif dikhata hai, phir 700ms baad asal number reveal hota hai. Sirf current player
     // ka box hi rolling dikhata hai (isRolling ke sath currentColor bhi check hota hai).
     var isRolling = mutableStateOf(false)
+    // Token move ke doraan true — asal HTML jaisa hi (koi ek waqt mein sirf ek hi token
+    // "slide" karta hai). Isay UI mein tapping disable karne ke liye use karo, taake move
+    // ke beech mein doosra tap na ho jaye.
+    var isMoving = mutableStateOf(false)
     var movable = mutableStateListOf<Int>()
     var gameOver = mutableStateOf(false)
     var winnerText = mutableStateOf("")
@@ -99,34 +104,84 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
     fun globalCellOf(color: LudoColor, pos: Int): Int =
         (COLOR_META.getValue(color).start + pos) % 52
 
-    // Token move karta hai; capture/safe-cell/arrow/quick-block rules apply karta hai,
+    // Ek cell par capture-check karta hai (asal HTML ke captureAtCell jaisa hoobahoo):
+    // safe cells (aur arrow-tail/head/edge spots) par kill nahi hota; aur agar kisi
+    // opponent color ke 2+ tokens ek hi cell par "block" bana kar khare hon to woh
+    // color kabhi capture nahi hoti — sirf akeli (1) token wali opponent color capture hoti hai.
+    private fun captureAtCell(color: LudoColor, g: Int): Boolean {
+        val isArrowSpot = mode == LudoMode.ARROW && (g in arrowTails || g in ARROW_EDGE_SET ||
+            players.any { arrowHeadFor(it) == g })
+        if (g in SAFE_SET && !isArrowSpot) return false
+
+        val byColor = LinkedHashMap<LudoColor, MutableList<Int>>()
+        for (oc in players) {
+            if (oc == color) continue
+            val ot = tokens.getValue(oc)
+            for (j in ot.indices) {
+                val op = ot[j]
+                if (op in 0..50 && globalCellOf(oc, op) == g) {
+                    byColor.getOrPut(oc) { mutableListOf() }.add(j)
+                }
+            }
+        }
+        var captured = false
+        byColor.forEach { (oc, idxs) ->
+            if (idxs.size >= 2) return@forEach // block — kabhi kill nahi hoti
+            val ot = tokens.getValue(oc)
+            idxs.forEach { j -> ot[j] = -1; captured = true }
+        }
+        return captured
+    }
+
+    // Token move karta hai — asal HTML jaisa hi ek-ek cell "slide" karke (step-by-step,
+    // ~220ms/cell), taake real smooth motion dikhe (seedha purani se nai jagah jump/cut
+    // nahi karta). Uske baad capture/safe-cell/arrow/quick-block rules apply karta hai,
     // phir checkWin karta hai aur agla turn set karta hai.
-    fun moveToken(tokenIdx: Int) {
-        if (gameOver.value || !diceRolled.value) return
+    suspend fun moveToken(tokenIdx: Int) {
+        if (gameOver.value || !diceRolled.value || isMoving.value) return
         val color = currentColor
         val t = tokens.getValue(color)
         val dv = diceByColor.getValue(color)
-        var newPos = if (t[tokenIdx] == -1) 0 else t[tokenIdx] + dv
-        if (newPos > 56) return
+        val wasInYard = t[tokenIdx] == -1
+        val rawTarget = if (wasInYard) 0 else t[tokenIdx] + dv
+        if (rawTarget > 56) return
 
+        isMoving.value = true
+        movable.clear()
+
+        // ---- Step 1: cell-by-cell slide (yard se nikalna = 1 hi step, seedha start par) ----
+        val steps = if (wasInYard) 1 else dv
+        repeat(steps) {
+            t[tokenIdx] = if (t[tokenIdx] == -1) 0 else t[tokenIdx] + 1
+            delay(180)
+        }
+
+        var newPos = t[tokenIdx]
         var captured = false
         var magicDiceBonus = false
 
         if (newPos in 0..50) {
-            var g = globalCellOf(color, newPos)
-
             // Quick mode: color ka apna block cell aa jaye to seedha finish
             if (mode == LudoMode.QUICK && newPos == QUICK_BLOCK_REL) {
                 newPos = 56
+                t[tokenIdx] = newPos
             }
-            // Arrow mode: apni exit-arm ka tail cell -> seedha head cell tak chala jata hai
-            else if (mode == LudoMode.ARROW && newPos == ARROW_TAIL_OFFSET) {
-                newPos = ARROW_HEAD_OFFSET
+            // Arrow mode: apni exit-arm ka tail cell ya apna edge cell -> turant warp
+            else if (mode == LudoMode.ARROW) {
+                val g0 = globalCellOf(color, newPos)
+                val isTail = g0 in arrowTails
+                val isOwnEdge = g0 in ARROW_EDGE_SET && ARROW_EDGE_OWNER[g0] == color
+                if (isTail || isOwnEdge) {
+                    delay(160) // asal HTML jaisa hi thora "poof" pause
+                    newPos = if (isTail) newPos + (ARROW_HEAD_OFFSET - ARROW_TAIL_OFFSET) else ARROW_EDGE_ENTRY_REL
+                    t[tokenIdx] = newPos
+                    delay(160)
+                }
             }
 
             // Magic mode: golden-dice cell -> agli roll seedha 6; rocket cell -> 1-15 ghar boost
             if (magicOn && newPos in 0..50) {
-                g = globalCellOf(color, newPos)
+                val g = globalCellOf(color, newPos)
                 if (g in magicDiceCells) {
                     bonusSix[color] = true
                     magicDiceBonus = true
@@ -135,32 +190,27 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
                     val boost = Random.nextInt(1, 16) // 1 se 15 tak
                     val maxAdd = minOf(boost, 56 - newPos)
                     relocateMagicCell(magicRocketCells, g)
-                    if (maxAdd > 0) newPos += maxAdd
+                    repeat(maxAdd) {
+                        newPos += 1
+                        t[tokenIdx] = newPos
+                        delay(90)
+                    }
                 }
             }
 
-            // Capture check (safe cells par capture nahi hota)
-            g = globalCellOf(color, newPos)
-            if (newPos in 0..50 && g !in SAFE_SET) {
-                for (oc in players) {
-                    if (oc == color) continue
-                    val ot = tokens.getValue(oc)
-                    for (j in ot.indices) {
-                        val op = ot[j]
-                        if (op in 0..50 && globalCellOf(oc, op) == g) {
-                            ot[j] = -1
-                            captured = true
-                        }
-                    }
-                }
+            // Capture check (safe cells par capture nahi hota, block wali color kabhi nahi)
+            if (newPos in 0..50) {
+                val g = globalCellOf(color, newPos)
+                if (captureAtCell(color, g)) captured = true
             }
         }
 
         t[tokenIdx] = newPos
         movable.clear()
         diceRolled.value = false
+        isMoving.value = false
 
-        val wonThisColor = checkWin(color)
+        checkWin(color)
         if (gameOver.value) return
 
         val extra = dv == 6 || captured || magicDiceBonus
