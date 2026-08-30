@@ -157,9 +157,24 @@ private fun BoxTokenWithGlow(
     val infiniteTransition = rememberInfiniteTransition(label = "tokenGlow")
     val glowScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.28f,
-        animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+        targetValue = 1.45f,
+        animationSpec = infiniteRepeatable(tween(650), RepeatMode.Reverse),
         label = "glowScale"
+    )
+    // Halke se ring ki apni alag, thori dheemi pulse — dono glow layers ek sath
+    // exactly sync mein na dhalke thora "living" feel dete hain (asal HTML ke
+    // CSS keyframe glow jaisa hi, jahan do shadows alag-alag speed se pulse karte thay).
+    val ringScale by infiniteTransition.animateFloat(
+        initialValue = 1.1f,
+        targetValue = 1.7f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "ringScale"
+    )
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "ringAlpha"
     )
     // Movable token khud bhi thora upar-neeche "bounce" karta hai (glow ke sath sath),
     // taake turn ke waqt chalne wala token aur bhi zyada nazar aaye. Bounce sirf
@@ -172,17 +187,30 @@ private fun BoxTokenWithGlow(
     )
     val bounceDy = if (isMovable) -(tokenSizeDp * 0.16f) * bounceT else 0.dp
     Box(
-        modifier = Modifier.size(tokenSizeDp).offset(x = animX, y = animY + bounceDy),
+        modifier = Modifier.size(tokenSizeDp * 1.9f).offset(
+            x = animX - (tokenSizeDp * 0.45f),
+            y = animY + bounceDy - (tokenSizeDp * 0.45f)
+        ),
         contentAlignment = Alignment.Center
     ) {
         if (isMovable) {
             val (glowStrong, glowSoft) = MOVABLE_GLOW.getValue(tokenColor)
+            // Outer expanding ring — background ke against sabse pehle nazar aata hai
             Box(
                 modifier = Modifier
-                    .size(tokenSizeDp * 1.5f)
+                    .size(tokenSizeDp * 1.55f)
+                    .graphicsLayer { scaleX = ringScale; scaleY = ringScale; alpha = ringAlpha }
+                    .border(2.dp, glowStrong, CircleShape)
+            )
+            // Andar wala solid glow halo — token ke seedha peeche, saturated aur zyada bright
+            Box(
+                modifier = Modifier
+                    .size(tokenSizeDp * 1.55f)
                     .graphicsLayer { scaleX = glowScale; scaleY = glowScale }
                     .background(
-                        Brush.radialGradient(listOf(glowStrong, glowSoft.copy(alpha = 0.35f), Color.Transparent)),
+                        Brush.radialGradient(
+                            listOf(glowStrong, glowSoft.copy(alpha = 0.5f), Color.Transparent)
+                        ),
                         CircleShape
                     )
             )
@@ -191,7 +219,7 @@ private fun BoxTokenWithGlow(
             model = imageUrl,
             contentDescription = contentDescription,
             modifier = Modifier
-                .matchParentSize()
+                .size(tokenSizeDp)
                 .clip(CircleShape)
                 .background(ludoColorOf(tokenColor))
                 .clickable(enabled = isMovable, onClick = onTap)
