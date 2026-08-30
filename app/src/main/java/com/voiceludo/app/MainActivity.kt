@@ -2,6 +2,7 @@ package com.voiceludo.app
 
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +45,22 @@ class MainActivity : ComponentActivity() {
         controller.hide(WindowInsetsCompat.Type.systemBars())
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+        // Notch/camera-cutout wale phones par, immersive mode ke bawajood, us
+        // cutout ke peechay content draw nahi hota jab tak yeh explicitly allow
+        // na kiya jaye — warna wahan hamesha ek black patti dikhti rehti hai
+        // (chahe status bar hidden ho). Yeh line poori screen tak content ko
+        // extend karti hai, cutout ke peechay bhi.
+        if (Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    } else {
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+            }
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
