@@ -7,6 +7,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,26 +27,34 @@ import coil.compose.AsyncImage
 // Asal HTML (#yallaHome) ka poora lobby screen — topbar (avatar/coins/gems/shop/settings),
 // league-rank locked cards, mode grid (2&4 Players / Team), bottom nav (Events/Battle/Chat/Social).
 // Sab image assets wahi postimg.cc links hain jo index.html mein the, taake look bilkul match kare.
+private const val HOME_BG_IMG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
+private const val NAV_GLOW_IMG = "file:///android_asset/img/selected-light-green-glow-transparent.png"
+private const val PILL_BG_IMG = "file:///android_asset/img/bg-add-coin.png"
+
 @Composable
 fun YallaHomeScreen(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF051a0f))
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            TopBar()
-            Spacer(Modifier.height(6.dp))
-            StatRow()
-            Spacer(Modifier.height(28.dp))
-            ModeGrid(navController)
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF051a0f))) {
+        AsyncImage(
+            model = HOME_BG_IMG,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                TopBar()
+                Spacer(Modifier.height(6.dp))
+                StatRow()
+                Spacer(Modifier.height(28.dp))
+                ModeGrid(navController)
+            }
+            BottomNav()
         }
-        BottomNav()
     }
 }
 
@@ -63,7 +75,7 @@ private fun TopBar() {
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
-                    model = "https://i.postimg.cc/MK9xMWRc/user-icon.png",
+                    model = "file:///android_asset/img/user-icon.png",
                     contentDescription = "avatar",
                     modifier = Modifier.size(46.dp),
                     contentScale = ContentScale.Fit
@@ -84,7 +96,7 @@ private fun TopBar() {
         Spacer(Modifier.width(6.dp))
 
         Pill(
-            iconUrl = "https://i.postimg.cc/MGQ8FVFh/coin-icon.webp",
+            iconUrl = "file:///android_asset/img/coin-icon.webp",
             value = "10K",
             valueColor = Color(0xFFffd700),
             addBg = Color(0xFF22c55e),
@@ -94,13 +106,13 @@ private fun TopBar() {
         Spacer(Modifier.width(6.dp))
 
         Pill(
-            iconUrl = "https://i.postimg.cc/XqcjDdp8/diamond.png",
+            iconUrl = "file:///android_asset/img/diamond.png",
             value = "10K",
             valueColor = Color(0xFF00e5ff),
             addBg = Color.Transparent,
             addContent = {
                 AsyncImage(
-                    model = "https://i.postimg.cc/wMVzkzG4/plus.png",
+                    model = "file:///android_asset/img/plus.png",
                     contentDescription = "add",
                     modifier = Modifier.size(22.dp)
                 )
@@ -110,13 +122,13 @@ private fun TopBar() {
         Spacer(Modifier.weight(1f))
 
         AsyncImage(
-            model = "https://i.postimg.cc/25MSqCsp/shop-cart.png",
+            model = "file:///android_asset/img/shop-cart.png",
             contentDescription = "shop",
             modifier = Modifier.size(26.dp)
         )
         Spacer(Modifier.width(14.dp))
         AsyncImage(
-            model = "https://i.postimg.cc/Yqz0XKWF/setting.png",
+            model = "file:///android_asset/img/setting.png",
             contentDescription = "settings",
             modifier = Modifier.size(26.dp)
         )
@@ -131,13 +143,18 @@ private fun Pill(
     addBg: Color,
     addContent: @Composable () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.Black.copy(alpha = 0.55f))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Box {
+        AsyncImage(
+            model = PILL_BG_IMG,
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.matchParentSize().clip(RoundedCornerShape(20.dp))
+        )
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         AsyncImage(model = iconUrl, contentDescription = null, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(6.dp))
         Text(value, color = valueColor, fontWeight = FontWeight.Black, fontSize = 13.sp)
@@ -149,6 +166,7 @@ private fun Pill(
                 .background(addBg),
             contentAlignment = Alignment.Center
         ) { addContent() }
+        }
     }
 }
 
@@ -192,14 +210,14 @@ private fun ModeGrid(navController: NavController) {
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         ModeCard(
-            imageUrl = "https://i.postimg.cc/Rh7MWKm5/2-4-players.png",
+            imageUrl = "file:///android_asset/img/2-4-players.png",
             label = "2&4 Players",
             gradient = Brush.linearGradient(listOf(Color(0xFFf7b733), Color(0xFFc46b1a))),
             modifier = Modifier.weight(1f)
         ) { navController.navigate("ludo_mode_select") }
 
         ModeCard(
-            imageUrl = "https://i.postimg.cc/GhRLZ7Ps/team.png",
+            imageUrl = "file:///android_asset/img/team.png",
             label = "Team",
             gradient = Brush.linearGradient(listOf(Color(0xFF8a7bd8), Color(0xFF5a4bc4))),
             modifier = Modifier.weight(1f)
@@ -244,6 +262,7 @@ private fun ModeCard(
 
 @Composable
 private fun BottomNav() {
+    var active by remember { mutableStateOf("Events") }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -251,17 +270,26 @@ private fun BottomNav() {
             .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        NavItem("https://i.postimg.cc/RZgdT6dz/Events.png", "Events")
-        NavItem("https://i.postimg.cc/Y0xYqZyK/Battle.png", "Battle")
-        NavItem("https://i.postimg.cc/3N3069rb/Chat.png", "Chat")
-        NavItem("https://i.postimg.cc/ZnY0jRjd/Social.png", "Social")
+        NavItem("file:///android_asset/img/Events.png", "Events", active == "Events") { active = "Events" }
+        NavItem("file:///android_asset/img/Battle.png", "Battle", active == "Battle") { active = "Battle" }
+        NavItem("file:///android_asset/img/Chat.png", "Chat", active == "Chat") { active = "Chat" }
+        NavItem("file:///android_asset/img/Social.png", "Social", active == "Social") { active = "Social" }
     }
 }
 
 @Composable
-private fun NavItem(iconUrl: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        AsyncImage(model = iconUrl, contentDescription = label, modifier = Modifier.size(46.dp))
+private fun NavItem(iconUrl: String, label: String, active: Boolean = false, onClick: () -> Unit = {}) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
+        Box(contentAlignment = Alignment.Center) {
+            if (active) {
+                AsyncImage(
+                    model = NAV_GLOW_IMG,
+                    contentDescription = null,
+                    modifier = Modifier.size(width = 78.dp, height = 57.dp)
+                )
+            }
+            AsyncImage(model = iconUrl, contentDescription = label, modifier = Modifier.size(if (active) 56.dp else 46.dp))
+        }
         Text(label, color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
     }
 }

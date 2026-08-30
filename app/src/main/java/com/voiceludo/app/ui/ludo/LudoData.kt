@@ -78,51 +78,69 @@ enum class LudoMode { CLASSIC, ARROW, QUICK, MASTER }
 
 // ==== Asal HTML mein jo image URLs use hoti thin, wahi yahan bhi — taake board,
 // tokens, dice, rank badges sab bilkul waisay hi dikhein.
-const val GAME_BG_IMG = "https://i.postimg.cc/qBFGBCmF/game-bg.webp"
-const val GAME_BOARD_IMG = "https://i.postimg.cc/jjWBTmd2/Checkerboard-duel7bdc5231556b.png"
+const val GAME_BG_IMG = "file:///android_asset/img/game-bg.webp"
+// Mode-select aur matching screen ka background (asal HTML ke #ludoModeScreen se) —
+// game board wala background isse alag hai (upar GAME_BG_IMG hai).
+const val MODE_SCREEN_BG_IMG = "file:///android_asset/img/game-bg.png"
+const val RANK_1_ICON = "file:///android_asset/img/rank-no-1.webp"
+const val RANK_2_ICON = "file:///android_asset/img/rank-no-2.webp"
+const val GAME_BOARD_IMG = "file:///android_asset/img/Checkerboard-duel7bdc5231556b.png"
 
 val TOKEN_IMG: Map<LudoColor, String> = mapOf(
-    LudoColor.GREEN to "https://i.postimg.cc/sXXpsV5G/piece-green.webp",
-    LudoColor.YELLOW to "https://i.postimg.cc/nVNwR5tV/piece-yellow.webp",
-    LudoColor.BLUE to "https://i.postimg.cc/d0J2NR10/piece-bule.webp",
-    LudoColor.RED to "https://i.postimg.cc/9z3TdZKM/piece-red.webp"
+    LudoColor.GREEN to "file:///android_asset/img/piece-green.webp",
+    LudoColor.YELLOW to "file:///android_asset/img/piece-yellow.webp",
+    LudoColor.BLUE to "file:///android_asset/img/piece-bule.webp",
+    LudoColor.RED to "file:///android_asset/img/piece-red.webp"
 )
 
 val DICE_FACE_IMG: Map<Int, String> = mapOf(
-    1 to "https://i.postimg.cc/W3vGnbXh/1.png",
-    2 to "https://i.postimg.cc/Hx9QPDNn/2.png",
-    3 to "https://i.postimg.cc/kGjWqN9h/3.png",
-    4 to "https://i.postimg.cc/T2QVVxmV/4.png",
-    5 to "https://i.postimg.cc/tCThDct8/5.png",
-    6 to "https://i.postimg.cc/fTrYPv8S/6.png"
+    1 to "file:///android_asset/img/1.png",
+    2 to "file:///android_asset/img/2.png",
+    3 to "file:///android_asset/img/3.png",
+    4 to "file:///android_asset/img/4.png",
+    5 to "file:///android_asset/img/5.png",
+    6 to "file:///android_asset/img/6.png"
 )
 
 // 4-player mein 1st/2nd/3rd finish karne walon ki profile par yehi rank badge lagta hai
 val RANK_BADGE_IMG: Map<Int, String> = mapOf(
-    1 to "https://i.postimg.cc/mkrk5s7b/room-icon-rank-crown.webp",
-    2 to "https://i.postimg.cc/mrRbn4Gc/1000101592-removebg-preview.png",
-    3 to "https://i.postimg.cc/3wJwRhbG/file-00000000229c81fd83b90d22a29f7bba.png"
+    1 to "file:///android_asset/img/room-icon-rank-crown.webp",
+    2 to "file:///android_asset/img/1000101592-removebg-preview.png",
+    3 to "file:///android_asset/img/file-00000000229c81fd83b90d22a29f7bba.png"
 )
 
-const val DEFAULT_AVATAR_IMG = "https://i.postimg.cc/MK9xMWRc/user-icon.png"
-const val MODE_2P_ICON = "https://i.postimg.cc/QdzJnZpV/game-online-2p-uncheck.png"
-const val MODE_4P_ICON = "https://i.postimg.cc/FzhyJrQy/game-online-4p-uncheck.png"
+const val DEFAULT_AVATAR_IMG = "file:///android_asset/img/user-icon.png"
+const val MODE_2P_ICON = "file:///android_asset/img/game-online-2p-uncheck.png"
+const val MODE_4P_ICON = "file:///android_asset/img/game-online-4p-uncheck.png"
 
 // Mode-select / bet-select screen ke icons (asal HTML se hoobahoo)
-const val TICK_ICON = "https://i.postimg.cc/MTxwDrHt/tick.webp"
-const val HOT_BADGE_ICON = "https://i.postimg.cc/90bQZHBN/fragment-Rule2.webp"
-const val BET_MINUS_ICON = "https://i.postimg.cc/8CFRktbs/regression-coin-min-check.webp"
-const val BET_PLUS_ICON = "https://i.postimg.cc/Bnn5kqLT/regression-coin-add-check.webp"
-const val COIN_ICON = "https://i.postimg.cc/sx3GWc56/coin.webp"
-const val GOLDEN_DICE_ICON = "https://i.postimg.cc/HLr8mn9K/icon-golden-dice.webp"
+const val TICK_ICON = "file:///android_asset/img/tick.webp"
+const val HOT_BADGE_ICON = "file:///android_asset/img/fragment-Rule2.webp"
+const val BET_MINUS_ICON = "file:///android_asset/img/regression-coin-min-check.webp"
+const val BET_PLUS_ICON = "file:///android_asset/img/regression-coin-add-check.webp"
+const val COIN_ICON = "file:///android_asset/img/coin.webp"
+const val GOLDEN_DICE_ICON = "file:///android_asset/img/icon-golden-dice.webp"
 
 val BET_OPTIONS = listOf(500, 2000, 10000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000)
 
 // Top bar + settings panel ke icons (asal HTML se hoobahoo)
-const val SETTINGS_ICON = "https://i.postimg.cc/y60TSpCD/system.webp"
-const val BET_INFO_ICON = "https://i.postimg.cc/9Qm12dSP/file-000000000d188208a6a8a0921cdc4517.png"
-const val SOUND_ICON = "https://i.postimg.cc/mr5tk4rG/room-ic-input-sound.webp"
-const val EXIT_ICON = "https://i.postimg.cc/5NSyvLtn/btn-associate-exit.webp"
+const val SETTINGS_ICON = "file:///android_asset/img/system.webp"
+const val BET_INFO_ICON = "file:///android_asset/img/file-000000000d188208a6a8a0921cdc4517.png"
+const val SOUND_ICON = "file:///android_asset/img/room-ic-input-sound.webp"
+const val SOUND_OFF_ICON = "file:///android_asset/img/room-ic-input-sound-off.webp"
+const val EXIT_ICON = "file:///android_asset/img/btn-associate-exit.webp"
+
+// Bet +/- button ke "disabled" (uncheck) variants — jab betIndex min/max par ho
+const val BET_MINUS_ICON_DISABLED = "file:///android_asset/img/regression-coin-min-uncheck.webp"
+const val BET_PLUS_ICON_DISABLED = "file:///android_asset/img/regression-coin-add-uncheck.webp"
+
+// Magic mode ke bonus-cell icons (board par dice/rocket bonus dikhane ke liye)
+const val MAGIC_DICE_ICON = "file:///android_asset/img/golden-dice-big.webp"
+const val MAGIC_ROCKET_ICON = "file:///android_asset/img/rocket.webp"
+
+// Arrow mode ka center diagonal arrow overlay, Quick mode ka block-cell icon (board par)
+const val ARROW_CENTER_ICON = "file:///android_asset/img/1000100827-removebg-preview.png"
+const val QUICK_BLOCK_ICON = "file:///android_asset/img/file-000000002f0c8211aadf26f528f26971.png"
 
 fun ludoColorOf(c: LudoColor): androidx.compose.ui.graphics.Color = when (c) {
     LudoColor.RED -> androidx.compose.ui.graphics.Color(0xFFE53935)

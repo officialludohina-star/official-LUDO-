@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import coil.compose.AsyncImage
@@ -14,6 +15,33 @@ import coil.compose.AsyncImage
 // Asal HTML jaisa hi board — wohi Checkerboard-duel background image, aur usi ke
 // upar har token apni asal PNG/WEBP image (piece-green/yellow/blue/red) ke sath
 // theek 15x15 grid ke row/col hisaab se position hota hai.
+
+// Arrow mode ke 4 curved + 4 center-diagonal arrow overlays — asal HTML ke
+// left%/top%/width%/rotate() values se hoobahoo liye gaye hain
+private data class ArrowSpot(val leftPct: Float, val topPct: Float, val widthPct: Float, val rotateDeg: Float)
+
+private const val ARROW_CURVED_ICON = "file:///android_asset/img/file-00000000dc8082118a379ac2ac711ac3.png"
+
+private val CURVED_ARROW_SPOTS = listOf(
+    ArrowSpot(39f, -1f, 14f, 0f),
+    ArrowSpot(84f, 36f, 14f, 89f),
+    ArrowSpot(47f, 79f, 15f, 180f),
+    ArrowSpot(2f, 43f, 15f, 270f)
+)
+private val CENTER_ARROW_SPOTS = listOf(
+    ArrowSpot(33f, 33f, 14f, 267f),
+    ArrowSpot(53f, 33f, 14f, 4f),
+    ArrowSpot(52f, 53f, 15f, 90f),
+    ArrowSpot(32f, 52f, 15f, 180f)
+)
+// Quick/Master mode ke 4 block-cell icons
+private val BLOCK_ICON_SPOTS = listOf(
+    ArrowSpot(42.6f, -1f, 15f, 0f),
+    ArrowSpot(3f, 39.6f, 14f, 271f),
+    ArrowSpot(82.2f, 38.6f, 15f, 89f),
+    ArrowSpot(42.6f, 79.2f, 15f, 0f)
+)
+
 @Composable
 fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) {
     BoxWithConstraints(
@@ -31,6 +59,42 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxWidth().aspectRatio(1f)
         )
+
+        // Arrow mode: curved + center diagonal arrow overlays
+        if (state.mode == LudoMode.ARROW) {
+            (CURVED_ARROW_SPOTS + CENTER_ARROW_SPOTS).forEach { spot ->
+                val iconSize = boardSizeDp * (spot.widthPct / 100f)
+                AsyncImage(
+                    model = if (spot in CURVED_ARROW_SPOTS) ARROW_CURVED_ICON else ARROW_CENTER_ICON,
+                    contentDescription = "arrow",
+                    modifier = Modifier
+                        .size(iconSize)
+                        .offset(
+                            x = boardSizeDp * (spot.leftPct / 100f),
+                            y = boardSizeDp * (spot.topPct / 100f)
+                        )
+                        .graphicsLayer(rotationZ = spot.rotateDeg)
+                )
+            }
+        }
+
+        // Quick/Master mode: block-cell icons
+        if (state.mode == LudoMode.QUICK || state.mode == LudoMode.MASTER) {
+            BLOCK_ICON_SPOTS.forEach { spot ->
+                val iconSize = boardSizeDp * (spot.widthPct / 100f)
+                AsyncImage(
+                    model = QUICK_BLOCK_ICON,
+                    contentDescription = "block",
+                    modifier = Modifier
+                        .size(iconSize)
+                        .offset(
+                            x = boardSizeDp * (spot.leftPct / 100f),
+                            y = boardSizeDp * (spot.topPct / 100f)
+                        )
+                        .graphicsLayer(rotationZ = spot.rotateDeg)
+                )
+            }
+        }
 
         state.players.forEach { color ->
             val list = state.tokens.getValue(color)

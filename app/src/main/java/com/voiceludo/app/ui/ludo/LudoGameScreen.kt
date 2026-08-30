@@ -71,7 +71,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int) {
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         AsyncImage(
-                            model = SOUND_ICON, contentDescription = "sound",
+                            model = if (soundOn) SOUND_ICON else SOUND_OFF_ICON, contentDescription = "sound",
                             modifier = Modifier.size(36.dp).clip(CircleShape)
                                 .background(Color.Black.copy(alpha = 0.25f))
                                 .clickable { soundOn = !soundOn }

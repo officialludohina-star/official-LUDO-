@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,12 @@ fun LudoModeSelectScreen(navController: NavController) {
     val totalPool = bet * players
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0a1a2a))) {
+        AsyncImage(
+            model = MODE_SCREEN_BG_IMG,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -93,7 +100,8 @@ fun LudoModeSelectScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     AsyncImage(
-                        model = BET_MINUS_ICON, contentDescription = "kam karo",
+                        model = if (betIndex <= 0) BET_MINUS_ICON_DISABLED else BET_MINUS_ICON,
+                        contentDescription = "kam karo",
                         modifier = Modifier.size(40.dp).clickable {
                             if (betIndex > 0) betIndex--
                         }
@@ -112,7 +120,8 @@ fun LudoModeSelectScreen(navController: NavController) {
                     }
                     Spacer(Modifier.width(16.dp))
                     AsyncImage(
-                        model = BET_PLUS_ICON, contentDescription = "zyada karo",
+                        model = if (betIndex >= BET_OPTIONS.lastIndex) BET_PLUS_ICON_DISABLED else BET_PLUS_ICON,
+                        contentDescription = "zyada karo",
                         modifier = Modifier.size(40.dp).clickable {
                             if (betIndex < BET_OPTIONS.lastIndex) betIndex++
                         }
@@ -123,6 +132,27 @@ fun LudoModeSelectScreen(navController: NavController) {
                     "Total Pool: $totalPool", color = Color(0xFFcce6ff), fontWeight = FontWeight.Bold, fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
+                // 4-player mein 1st (60%) / 2nd (40%) prize split, rank badge icons ke sath —
+                // asal HTML ke renderPoolAndPrize() se
+                if (players == 4) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(Modifier.weight(1f))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            AsyncImage(model = RANK_1_ICON, contentDescription = "1st prize", modifier = Modifier.size(20.dp))
+                            Text((totalPool * 0.6).let { Math.round(it) }.toString(), color = Color(0xFF7fffbf), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            AsyncImage(model = RANK_2_ICON, contentDescription = "2nd prize", modifier = Modifier.size(20.dp))
+                            Text((totalPool * 0.4).let { Math.round(it) }.toString(), color = Color(0xFFffe066), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                        }
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
             }
 
             // MAGIC TOGGLE CARD
