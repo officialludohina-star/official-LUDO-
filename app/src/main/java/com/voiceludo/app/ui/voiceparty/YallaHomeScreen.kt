@@ -5,10 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,10 +39,15 @@ private const val HOME_BG_IMG = "file:///android_asset/img/file-0000000097f0820b
 private const val NAV_GLOW_IMG = "file:///android_asset/img/selected-light-green-glow-transparent.png"
 private const val PILL_BG_IMG = "file:///android_asset/img/bg-add-coin.png"
 
-// ---- Home-page icon layout panel: har icon ki position (x/y offset) aur size
-// (scale) ko yahan se live edar-udar aur chota-bara kiya ja sakta hai (session ke
-// doraan; app restart hone par default position par wapis aa jate hain). ----
-private data class IconAdjust(val dx: Dp = 0.dp, val dy: Dp = 0.dp, val scale: Float = 1f)
+// ---- Home-page icon layout panel: har icon ki position (Left/Right, Up/Down)
+// aur Size — bilkul ludo token panel jaisa (dropdown se icon chuno, phir slider
+// + -/+ buttons + number box). Session ke doraan yaad rehta hai; app restart
+// hone par default par wapis aa jata hai. ----
+private data class IconAdjust(
+    val x: Int = 0,      // Left/Right, px
+    val y: Int = 0,      // Up/Down, px
+    val size: Int = 100  // %, 100 = default
+)
 
 private object HomeLayoutStore {
     // key -> current adjustment. Compose state map hai isliye jahan bhi read hoga
@@ -61,14 +64,19 @@ private object HomeLayoutStore {
 
     fun get(key: String): IconAdjust = adjust[key] ?: IconAdjust()
 
-    fun move(key: String, ddx: Dp, ddy: Dp) {
+    fun setX(key: String, px: Int) {
         val a = get(key)
-        adjust[key] = a.copy(dx = a.dx + ddx, dy = a.dy + ddy)
+        adjust[key] = a.copy(x = px.coerceIn(-200, 200))
     }
 
-    fun resize(key: String, dScale: Float) {
+    fun setY(key: String, px: Int) {
         val a = get(key)
-        adjust[key] = a.copy(scale = (a.scale + dScale).coerceIn(0.4f, 2.5f))
+        adjust[key] = a.copy(y = px.coerceIn(-200, 200))
+    }
+
+    fun setSize(key: String, percent: Int) {
+        val a = get(key)
+        adjust[key] = a.copy(size = percent.coerceIn(10, 200))
     }
 
     fun reset(key: String) { adjust.remove(key) }
@@ -76,14 +84,15 @@ private object HomeLayoutStore {
 }
 
 // Modifier extension — kisi bhi icon/card par lagao, HomeLayoutStore ke mutabiq
-// offset + scale apply ho jata hai (edar-udar move + chota-bara resize).
+// offset + size apply ho jata hai (edar-udar move + chota-bara).
 @Composable
 private fun Modifier.homeLayout(key: String): Modifier {
     val a = HomeLayoutStore.get(key)
     return this
-        .offset(x = a.dx, y = a.dy)
-        .graphicsLayer(scaleX = a.scale, scaleY = a.scale)
+        .offset(x = a.x.dp, y = a.y.dp)
+        .graphicsLayer(scaleX = a.size / 100f, scaleY = a.size / 100f)
 }
+
 
 @Composable
 fun YallaHomeScreen(navController: NavController) {
@@ -112,6 +121,20 @@ fun YallaHomeScreen(navController: NavController) {
             }
             BottomNav()
         }
+
+        // Build-check marker — sirf yeh dekh kar pata chal jayega ke naya code
+        // install hua ya nahi. Screen ke bilkul top-left corner mein rehta hai.
+        Text(
+            "BUILD-05 \u2014 dropdown panel",
+            color = Color(0xFF00ff88),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+        )
 
         if (showLayoutPanel) {
             IconLayoutPanel(onClose = { showLayoutPanel = false })
@@ -143,103 +166,199 @@ fun YallaHomeScreen(navController: NavController) {
 // — taake yeh screen ki puri jagah na ghere aur user isay jahan chahe wahan sarka sake.
 @Composable
 private fun IconLayoutPanel(onClose: () -> Unit) {
-    val step = 4.dp
     var panelDragY by remember { mutableStateOf(0f) }
+    var selectedKey by remember { mutableStateOf(HomeLayoutStore.keys.first().first) }
+    var dropdownOpen by remember { mutableStateOf(false) }
+    val selectedLabel = HomeLayoutStore.keys.first { it.first == selectedKey }.second
+    val current = HomeLayoutStore.get(selectedKey)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(Color.Black.copy(alpha = 0.45f))
             .clickable(onClick = onClose)
     ) {
         Column(
             modifier = Modifier
-                .align(Alignment.Center)
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 30.dp)
                 .offset { IntOffset(0, panelDragY.roundToInt()) }
-                .fillMaxWidth(0.9f)
-                .heightIn(max = 480.dp)
-                .background(Color(0xF20F1E37), RoundedCornerShape(16.dp))
+                .fillMaxWidth(0.92f)
+                .background(Color(0xFF12122a), RoundedCornerShape(14.dp))
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {} // andar tap se panel band na ho
-                .padding(14.dp)
         ) {
+            // Purple header — bilkul Ludo token-panel jaisa "pakar kar kahin bhi le jao" bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color(0xFF7c3aed), RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                     .pointerInput(Unit) {
-                        // Sirf yahi header-row "drag handle" hai — upar-neechay ghaseet
-                        // kar poora panel apni jagah se hila sakte hain.
                         detectDragGestures { change, dragAmount ->
                             change.consume()
                             panelDragY += dragAmount.y
                         }
-                    },
+                    }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Icons ka layout \u2195", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "Reset all",
-                        color = Color(0xFFFFCC33),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { HomeLayoutStore.resetAll() }
-                    )
-                    Text(
-                        "Band karein \u2715",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable(onClick = onClose)
-                    )
+                Text(
+                    "\uD83D\uDC49 ICON PANEL \u2014 pakar kar kahin bhi le jao",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFff5a5a))
+                        .clickable(onClick = onClose),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("\u2715", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                HomeLayoutStore.keys.forEach { (key, label) ->
+
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text("Icon Position / Size", color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                Spacer(Modifier.height(10.dp))
+
+                // Dropdown — kaunsa icon adjust karna hai
+                Box {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White)
+                            .clickable { dropdownOpen = true }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        LayoutBtn("\u25C0") { HomeLayoutStore.move(key, -step, 0.dp) }
-                        LayoutBtn("\u25B6") { HomeLayoutStore.move(key, step, 0.dp) }
-                        LayoutBtn("\u25B2") { HomeLayoutStore.move(key, 0.dp, -step) }
-                        LayoutBtn("\u25BC") { HomeLayoutStore.move(key, 0.dp, step) }
-                        Spacer(Modifier.width(6.dp))
-                        LayoutBtn("\u2212") { HomeLayoutStore.resize(key, -0.08f) }
-                        LayoutBtn("+") { HomeLayoutStore.resize(key, 0.08f) }
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "\u21BA",
-                            color = Color(0xFFFFCC33),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black,
-                            modifier = Modifier.clickable { HomeLayoutStore.reset(key) }
-                        )
+                        Text(selectedLabel, color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("\u25BC", color = Color.Black, fontSize = 11.sp)
+                    }
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = dropdownOpen,
+                        onDismissRequest = { dropdownOpen = false },
+                        modifier = Modifier.background(Color.White)
+                    ) {
+                        HomeLayoutStore.keys.forEach { (key, label) ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(label, fontSize = 13.sp) },
+                                onClick = { selectedKey = key; dropdownOpen = false }
+                            )
+                        }
                     }
                 }
+
+                Spacer(Modifier.height(14.dp))
+
+                SliderRow(
+                    label = "Left / Right",
+                    value = current.x,
+                    range = -200..200,
+                    onValue = { HomeLayoutStore.setX(selectedKey, it) }
+                )
+                Spacer(Modifier.height(10.dp))
+                SliderRow(
+                    label = "Up / Down",
+                    value = current.y,
+                    range = -200..200,
+                    onValue = { HomeLayoutStore.setY(selectedKey, it) }
+                )
+                Spacer(Modifier.height(10.dp))
+                SliderRow(
+                    label = "Size",
+                    value = current.size,
+                    range = 10..200,
+                    onValue = { HomeLayoutStore.setSize(selectedKey, it) }
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                YellowButton("Reset selected icon") { HomeLayoutStore.reset(selectedKey) }
+                Spacer(Modifier.height(8.dp))
+                YellowButton("Reset all icons") { HomeLayoutStore.resetAll() }
+
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "+ / \u2212 se 1-1 step adjust karo. Slider bhi available hai. X/Y \u00B1200px, Size 10\u2013200%.",
+                    color = Color.White.copy(alpha = 0.55f),
+                    fontSize = 10.sp
+                )
+            }
+        }
+    }
+}
+
+// Ek row: label, [-] button, slider, [+] button, number box — bilkul ludo token
+// panel ("Left/Right", "Up/Down", "Size") jaisa.
+@Composable
+private fun SliderRow(label: String, value: Int, range: IntRange, onValue: (Int) -> Unit) {
+    Column {
+        Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            YellowSquareBtn("\u2212") { onValue((value - 1).coerceIn(range)) }
+            Spacer(Modifier.width(8.dp))
+            androidx.compose.material3.Slider(
+                value = value.toFloat(),
+                onValueChange = { onValue(it.roundToInt().coerceIn(range)) },
+                valueRange = range.first.toFloat()..range.last.toFloat(),
+                modifier = Modifier.weight(1f).height(24.dp),
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = Color(0xFF3a8bff),
+                    activeTrackColor = Color(0xFF3a8bff),
+                    inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                )
+            )
+            Spacer(Modifier.width(8.dp))
+            YellowSquareBtn("+") { onValue((value + 1).coerceIn(range)) }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .width(52.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color.White.copy(alpha = 0.14f))
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(value.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
             }
         }
     }
 }
 
 @Composable
-private fun LayoutBtn(label: String, onClick: () -> Unit) {
+private fun YellowSquareBtn(label: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(24.dp)
+            .size(28.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(Color.White.copy(alpha = 0.14f))
+            .background(Color(0xFFFFCC33))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Text(label, color = Color(0xFF3a2500), fontSize = 15.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun YellowButton(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFFFCC33))
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = Color(0xFF3a2500), fontSize = 13.sp, fontWeight = FontWeight.Black)
     }
 }
 
