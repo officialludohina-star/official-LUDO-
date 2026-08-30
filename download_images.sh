@@ -59,4 +59,6 @@ curl -sL --retry 3 -o "$OUT/1000100827-removebg-preview.png" "https://i.postimg.
 curl -sL --retry 3 -o "$OUT/plus.png" "https://i.postimg.cc/wMVzkzG4/plus.png"
 curl -sL --retry 3 -o "$OUT/rank-no-1.webp" "https://i.postimg.cc/wvvWDTBV/rank-no-1.webp"
 curl -sL --retry 3 -o "$OUT/system.webp" "https://i.postimg.cc/y60TSpCD/system.webp"
-echo "Sab $(ls \"$OUT\" | wc -l) images download ho gayi hain assets/img/ mein."
+curl -sL --retry 3 -o "$OUT/dice-roll-animation.gif" "https://i.postimg.cc/zv44tgMF/dice-roll-animation.gif"
+curl -sL --retry 3 -o "$OUT/IMG-20260825-WA0006.jpg" "https://i.postimg.cc/Z5wBdpqw/IMG-20260825-WA0006.jpg"
+echo "Sab $(ls "$OUT" | wc -l) images download ho gayi hain assets/img/ mein."

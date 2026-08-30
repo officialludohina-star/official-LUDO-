@@ -107,7 +107,7 @@ val TOKEN_IMG: Map<LudoColor, String> = mapOf(
     LudoColor.RED to "file:///android_asset/img/piece-red.webp"
 )
 
-const val DICE_ROLL_GIF = "file:///android_asset/img/dice-roll-animation.gif"
+const val DICE_ROLL_GIF = "https://i.postimg.cc/zv44tgMF/dice-roll-animation.gif"
 
 val DICE_FACE_IMG: Map<Int, String> = mapOf(
     1 to "file:///android_asset/img/1.png",

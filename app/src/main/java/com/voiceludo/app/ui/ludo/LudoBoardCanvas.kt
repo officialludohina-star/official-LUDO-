@@ -10,24 +10,39 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
 // Asal HTML jaisa hi board — wohi Checkerboard-duel background image, aur usi ke
@@ -91,6 +106,23 @@ private val CENTER_ARROW_SPOTS = listOf(
     ArrowSpot(52f, 53f, 15f, 90f),
     ArrowSpot(32f, 52f, 15f, 180f)
 )
+
+// ===== Live tuning panel ke liye =====
+// Har arrow ka left%/top%/width% runtime mein +/- se badla/ghataya ja sakta hai
+// (rotation fix rehta hai — sirf size aur position adjust hoti hai). Yeh sirf is
+// session ke liye hai: jab tak Hacfs final numbers na de, ye state app restart hone
+// par default values (upar wale CURVED/CENTER_ARROW_SPOTS) par wapis chali jayegi.
+class TunableArrowSpot(spot: ArrowSpot) {
+    var leftPct by mutableStateOf(spot.leftPct)
+    var topPct by mutableStateOf(spot.topPct)
+    var widthPct by mutableStateOf(spot.widthPct)
+    val rotateDeg = spot.rotateDeg
+}
+
+object ArrowTuning {
+    val curved = CURVED_ARROW_SPOTS.map { TunableArrowSpot(it) }
+    val center = CENTER_ARROW_SPOTS.map { TunableArrowSpot(it) }
+}
 // Quick/Master mode ke 4 block-cell icons
 private val BLOCK_ICON_SPOTS = listOf(
     ArrowSpot(42.6f, -1f, 15f, 0f),
@@ -192,27 +224,30 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
         }
 
         // Arrow mode: curved + center diagonal arrow overlays — asal HTML ke
-        // ".board-arrow { filter: drop-shadow(...) brightness(0) ... }" jaisa hi:
-        // arrow image chahe original mein kisi bhi rang ki ho, yahan hamesha solid
-        // black silhouette + halka drop-shadow ke sath dikhti hai (size/position
-        // dono HTML ke % values se hoobahoo copy kiye gaye hain).
+        // ".board-arrow { filter: brightness(0) ... }" jaisa hi: arrow image chahe
+        // original mein kisi bhi rang ki ho, yahan hamesha solid black silhouette
+        // dikhti hai. Position/size ab ArrowTuning se aate hain (panel se live
+        // adjust ho sakte hain), rotation fix rehta hai. NOTE: .shadow() jaan-boojh
+        // kar nahi lagaya — Compose ka shadow hamesha ek seedha (un-rotated)
+        // rectangle box banata hai jo rotated arrows ke peeche ek badsurat white
+        // box jaisa dikhta hai.
         if (state.mode == LudoMode.ARROW) {
-            (CURVED_ARROW_SPOTS + CENTER_ARROW_SPOTS).forEach { spot ->
-                val iconSize = boardSizeDp * (spot.widthPct / 100f)
-                AsyncImage(
-                    model = if (spot in CURVED_ARROW_SPOTS) ARROW_CURVED_ICON else ARROW_CENTER_ICON,
-                    contentDescription = "arrow",
-                    colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
-                    modifier = Modifier
-                        .size(iconSize)
-                        .offset(
-                            x = boardSizeDp * (spot.leftPct / 100f),
-                            y = boardSizeDp * (spot.topPct / 100f)
-                        )
-                        .graphicsLayer(rotationZ = spot.rotateDeg)
-                        .shadow(elevation = 2.dp, clip = false, ambientColor = Color.Black, spotColor = Color.Black)
-                )
-            }
+            (ArrowTuning.curved.map { it to ARROW_CURVED_ICON } + ArrowTuning.center.map { it to ARROW_CENTER_ICON })
+                .forEach { (spot, icon) ->
+                    val iconSize = boardSizeDp * (spot.widthPct / 100f)
+                    AsyncImage(
+                        model = icon,
+                        contentDescription = "arrow",
+                        colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+                        modifier = Modifier
+                            .size(iconSize)
+                            .offset(
+                                x = boardSizeDp * (spot.leftPct / 100f),
+                                y = boardSizeDp * (spot.topPct / 100f)
+                            )
+                            .graphicsLayer(rotationZ = spot.rotateDeg)
+                    )
+                }
         }
 
         // Quick/Master mode: block-cell icons
@@ -358,4 +393,79 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
             }
         }
     }
+}
+
+// ===== Arrow Tuning Panel =====
+// Hacfs ke liye debug panel: har black arrow (4 curved + 4 center-diagonal) ki
+// size (W) aur position (X/Y) +/- se live adjust karne ke liye. Har tap se 0.5%
+// (board ke hisaab se) badhta/ghatata hai. Jab final values theek lagen, unhe
+// yahan se padh kar mujhe bata dena — main unhe permanent default bana dunga.
+private const val TUNE_STEP = 0.5f
+
+@Composable
+fun ArrowTuningPanel(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .background(Color(0xF20F1E37), RoundedCornerShape(12.dp))
+            .padding(10.dp)
+            .heightIn(max = 380.dp)
+            .width(260.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Arrow Tuning", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color.White.copy(alpha = 0.18f))
+                    .clickable(onClick = onClose),
+                contentAlignment = Alignment.Center
+            ) { Text("✕", color = Color.White, fontSize = 12.sp) }
+        }
+
+        (ArrowTuning.curved + ArrowTuning.center).forEachIndexed { i, spot ->
+            Column(modifier = Modifier.padding(top = 8.dp)) {
+                Text(
+                    if (i < 4) "Curved Arrow ${i + 1}" else "Center Arrow ${i - 3}",
+                    color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold
+                )
+                TuneStepperRow("W", spot.widthPct, onDec = { spot.widthPct -= TUNE_STEP }, onInc = { spot.widthPct += TUNE_STEP })
+                TuneStepperRow("X", spot.leftPct, onDec = { spot.leftPct -= TUNE_STEP }, onInc = { spot.leftPct += TUNE_STEP })
+                TuneStepperRow("Y", spot.topPct, onDec = { spot.topPct -= TUNE_STEP }, onInc = { spot.topPct += TUNE_STEP })
+            }
+        }
+    }
+}
+
+@Composable
+private fun TuneStepperRow(label: String, value: Float, onDec: () -> Unit, onInc: () -> Unit) {
+    Row(
+        modifier = Modifier.padding(top = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, modifier = Modifier.width(12.dp))
+        TuneBtn("−", onDec)
+        Text(
+            "%.1f".format(value), color = Color.White, fontSize = 11.sp,
+            modifier = Modifier.width(38.dp), textAlign = TextAlign.Center
+        )
+        TuneBtn("+", onInc)
+    }
+}
+
+@Composable
+private fun TuneBtn(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(22.dp)
+            .clip(RoundedCornerShape(5.dp))
+            .background(Color.White.copy(alpha = 0.18f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) { Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
 }

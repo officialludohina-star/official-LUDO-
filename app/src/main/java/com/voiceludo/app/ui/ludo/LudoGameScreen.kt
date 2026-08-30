@@ -55,6 +55,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 
     var showSettings by remember { mutableStateOf(false) }
     var soundOn by remember { mutableStateOf(true) }
+    var showArrowTuning by remember { mutableStateOf(false) }
 
     // Asal HTML: window.COLOR_TO_POS — 4P mein har color apne board-quadrant ke
     // corner par hi apna profile+dice dikhata hai; 2P mein self hamesha bottom-left,
@@ -116,6 +117,29 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                     model = BET_INFO_ICON, contentDescription = "bet info",
                     modifier = Modifier.size(44.dp).clickable { /* bet info popup */ }
                 )
+                // Debug/tuning panel — sirf Arrow mode mein dikhta hai, taake Hacfs
+                // har black arrow ka size aur position live adjust kar sake
+                if (ludoMode == LudoMode.ARROW) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.18f))
+                            .clickable { showArrowTuning = !showArrowTuning },
+                        contentAlignment = Alignment.Center
+                    ) { Text("🏹", fontSize = 16.sp) }
+                }
+            }
+        }
+
+        // Arrow tuning panel — top-right corner, settings panel jaisa hi overlay
+        if (showArrowTuning) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-10).dp, y = 56.dp)
+            ) {
+                ArrowTuningPanel(onClose = { showArrowTuning = false })
             }
         }
 
