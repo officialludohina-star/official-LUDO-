@@ -40,6 +40,9 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
     // ke beech mein doosra tap na ho jaye.
     var isMoving = mutableStateOf(false)
     var movable = mutableStateListOf<Int>()
+    var killerFlashPos = mutableStateOf<Int?>(null)
+    var killedFlashPos = mutableStateOf<Int?>(null)
+
     var gameOver = mutableStateOf(false)
     var winnerText = mutableStateOf("")
 
@@ -156,6 +159,12 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
     // Ab tak jama saare savedRolls ke mutabiq kaunse tokens chal saktay hain, ye check
     // karta hai. Kuch bhi movable na ho to chain khud khatam ho kar turn aage badh jata
     // hai; warna human ka intezaar (tap) ya bot khud chain resolve kar leta hai.
+    //
+    // NOTE: agar sirf EK hi token movable hai aur uske liye bhi sirf EK hi number legal
+    // hai (matlab koi real choice hi nahi hai — jaisay 6 se yard se nikalne ke baad
+    // baaki bachi hui 3 sirf usi token par lag sakti hai), to human se dobara tap
+    // maangna zaroori nahi — khud-b-khud chal jata hai (asal ludo games jaisa hi,
+    // taake player ko na lagay ke "token aage nahi ja raha").
     private suspend fun handleDiceResult() {
         val color = currentColor
         val movableSet = mutableListOf<Int>()
@@ -173,6 +182,17 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
         movable.addAll(movableSet)
         if (currentIdx.value != 0) {
             botResolveChain()
+            return
+        }
+        if (movableSet.size == 1) {
+            val onlyIdx = movableSet[0]
+            val legalIdxs = legalRollsForToken(color, onlyIdx)
+            val distinctValues = legalIdxs.map { savedRolls[it] }.distinct()
+            if (distinctValues.size == 1) {
+                delay(350) // thora pause taake player dekh le ke kaunsa token chalne wala hai
+                applyRollToToken(onlyIdx, legalIdxs[0])
+                return
+            }
         }
         // warna: human ke tap ka intezaar — UI se tapToken()/chooseRoll() call hoga
     }
@@ -348,6 +368,8 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
             if (idxs.size >= 2) return@forEach // block — kabhi kill nahi hoti
             val ot = tokens.getValue(oc)
             idxs.forEach { j -> ot[j] = -1; captured = true }
+            killerFlashPos.value = g
+            killedFlashPos.value = g
         }
         return captured
     }
@@ -456,6 +478,12 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
         isMoving.value = false
 
         val reachedHome = newPos == 56
+        // Capture flash: 2 second ke baad icons clear kar do
+        if (captured) {
+            delay(2000)
+            killerFlashPos.value = null
+            killedFlashPos.value = null
+        }
         checkWin(color)
 
         // NOTE (asal HTML se hoobahoo match): golden-dice cell par land hona khud

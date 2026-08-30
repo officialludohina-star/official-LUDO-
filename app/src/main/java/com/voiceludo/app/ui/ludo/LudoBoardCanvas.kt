@@ -476,6 +476,35 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                 }
             }
         }
+
+        // ---- Capture flash overlays ----
+        // Jab koi token kill kare: horse-chat icon (attacker ke upar) 2 sec
+        // Jab token kill ho kar ghar jaye: img8-static icon (usi cell par) 2 sec
+        val horseIcon = "https://i.postimg.cc/T335q8LT/horse-chat.webp"
+        val homeIcon  = "https://i.postimg.cc/vZTDxWkg/img8-static.png"
+
+        listOf(
+            state.killerFlashPos.value to horseIcon,
+            state.killedFlashPos.value to homeIcon
+        ).forEach { (globalPos, iconUrl) ->
+            if (globalPos != null && globalPos in RING.indices) {
+                val rc = RING[globalPos]
+                val flashLeft = boardSizeDp * (BOARD_INSET_PCT / 100f) + cellDp * rc.col
+                val flashTop  = boardSizeDp * (BOARD_INSET_PCT / 100f) + cellDp * rc.row
+                Box(
+                    modifier = Modifier
+                        .offset(x = flashLeft, y = flashTop)
+                        .size(cellDp)
+                ) {
+                    AsyncImage(
+                        model = iconUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -40,6 +40,9 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
     // ke beech mein doosra tap na ho jaye.
     var isMoving = mutableStateOf(false)
     var movable = mutableStateListOf<Int>()
+    var killerFlashPos = mutableStateOf<Int?>(null)
+    var killedFlashPos = mutableStateOf<Int?>(null)
+
     var gameOver = mutableStateOf(false)
     var winnerText = mutableStateOf("")
 
@@ -365,6 +368,8 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
             if (idxs.size >= 2) return@forEach // block — kabhi kill nahi hoti
             val ot = tokens.getValue(oc)
             idxs.forEach { j -> ot[j] = -1; captured = true }
+            killerFlashPos.value = g
+            killedFlashPos.value = g
         }
         return captured
     }
@@ -473,6 +478,12 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
         isMoving.value = false
 
         val reachedHome = newPos == 56
+        // Capture flash: 2 second ke baad icons clear kar do
+        if (captured) {
+            delay(2000)
+            killerFlashPos.value = null
+            killedFlashPos.value = null
+        }
         checkWin(color)
 
         // NOTE (asal HTML se hoobahoo match): golden-dice cell par land hona khud
