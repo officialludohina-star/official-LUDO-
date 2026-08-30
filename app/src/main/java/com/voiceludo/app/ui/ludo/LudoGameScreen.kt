@@ -1,8 +1,14 @@
 package com.voiceludo.app.ui.ludo
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,18 +17,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // Asal HTML ke #ludoGameScreen jaisa hi — sab kuch (top icons, settings panel, board,
 // har player ka profile+dice) HTML ke % left/top/right values ke mutabiq bilkul
@@ -106,12 +117,28 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             }
         }
 
-        // .game-settings-panel: position:absolute; top:56px; left:10px
+        // .game-settings-panel: position:absolute; top:56px; left:10px (asal jagah), lekin
+        // ab user isay drag kar ke jahan marzi le ja sakta hai (panelDragOffset yaad rakhta
+        // hai) — kyunke ye panel board ke oopar kaafi jagah gher leta tha aur fixed jagah
+        // par disturb karta tha.
+        var panelDragOffset by remember { mutableStateOf(Offset.Zero) }
+        val density = LocalDensity.current
         if (showSettings) {
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = 10.dp, y = 56.dp)
+                    .offset {
+                        IntOffset(
+                            (with(density) { 10.dp.toPx() } + panelDragOffset.x).roundToInt(),
+                            (with(density) { 56.dp.toPx() } + panelDragOffset.y).roundToInt()
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            panelDragOffset += dragAmount
+                        }
+                    }
                     .background(Color(0xF20F1E37), RoundedCornerShape(12.dp))
                     .border(1.5.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                     .padding(8.dp),
@@ -168,6 +195,12 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 val dice = @Composable {
                     val scope = rememberCoroutineScope()
                     Box {
+                        // Jis player ki abhi bari hai uske dice-box ke oopar ek green
+                        // arrow bounce karta hai (HTML jaisa) — taake turn kiski hai
+                        // yeh turant, saaf saaf nazar aaye.
+                        if (color == state.currentColor && !state.gameOver.value) {
+                            TurnArrow()
+                        }
                         PlayerDiceBox(
                             // Har player apna alag stored dice-value dikhata hai (HTML jaisa) —
                             // rolling-gif sirf usi color ke box mein chalti hai jiski abhi turn hai.
@@ -209,33 +242,10 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             }
         }
 
-        // Neeche wala status/hint bar — asal HTML mein aisa nahi tha, lekin user ki
-        // request par add kiya: "Apki baari hai", "Token nikalein" (jab saare tokens
-        // yard mein hon aur 6 chahiye), "Chalne wala token tap karein", ya bot ka naam
-        // dikhata hai jab uski bari ho. Hamesha dikhta hai (sirf gameOver par gayab).
-        if (!state.gameOver.value) {
-            val hintText = when {
-                state.currentIdx.value != 0 -> "${state.currentColor.name.lowercase().replaceFirstChar { it.uppercase() }} soch raha hai\u2026"
-                state.rollChoice.value != null -> "Number chunein"
-                state.movable.isNotEmpty() -> {
-                    val allInYard = state.tokens.getValue(state.currentColor).all { it == -1 }
-                    if (allInYard) "Token nikalein" else "Chalne wala token tap karein"
-                }
-                state.isRolling.value -> "Dice roll ho rahi hai\u2026"
-                else -> "Apki baari hai \u2014 dice roll karein"
-            }
-            Text(
-                hintText,
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 20.dp)
-                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            )
-        }
+        // Neeche wala status/hint bar hata diya gaya hai (user ki request par) — ab board
+        // par "Apki baari hai — dice roll karein" jaisa koi message nahi dikhta. Turn ka
+        // pata ab sirf active player ke dice-box ke oopar wale green arrow (neeche) aur
+        // token ke glow se chalta hai.
 
         // Asal HTML ke #rollChoicePopup jaisa — jab ek movable token ke liye ek se
         // zyada ALAG saved number (jaisay 6 aur 4 dono) legal hon, player yahan se
@@ -339,6 +349,29 @@ private fun PlayerProfileBox(name: String, color: LudoColor, rank: Int?) {
             modifier = Modifier.padding(top = 5.dp).width(66.dp)
         )
     }
+}
+
+// Current-turn indicator — dice-box ke bilkul oopar ek green bouncing arrow (neeche
+// ki taraf ishara karta hua), jis se pata chalta hai ke abhi kis ki bari hai. Asal
+// HTML ke turn-highlight jaisa hi concept, sirf yahan ek simple bouncing glyph hai.
+@Composable
+private fun TurnArrow() {
+    val infiniteTransition = rememberInfiniteTransition(label = "turnArrow")
+    val bounce by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(450), RepeatMode.Reverse),
+        label = "turnArrowBounce"
+    )
+    Text(
+        "\u25BC",
+        color = Color(0xFF2ECC40),
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Black,
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .offset(y = (-22).dp - (4.dp * bounce))
+    )
 }
 
 // .game-dice-box: 50x50, rgba white 0.12 bg, 10dp rounded corners

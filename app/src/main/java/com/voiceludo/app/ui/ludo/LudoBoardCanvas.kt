@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -160,8 +161,18 @@ private fun BoxTokenWithGlow(
         animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
         label = "glowScale"
     )
+    // Movable token khud bhi thora upar-neeche "bounce" karta hai (glow ke sath sath),
+    // taake turn ke waqt chalne wala token aur bhi zyada nazar aaye. Bounce sirf
+    // isMovable hote hue lagta hai — warna token apni fixed jagah par hi rehta hai.
+    val bounceT by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(350), RepeatMode.Reverse),
+        label = "tokenBounce"
+    )
+    val bounceDy = if (isMovable) -(tokenSizeDp * 0.16f) * bounceT else 0.dp
     Box(
-        modifier = Modifier.size(tokenSizeDp).offset(x = animX, y = animY),
+        modifier = Modifier.size(tokenSizeDp).offset(x = animX, y = animY + bounceDy),
         contentAlignment = Alignment.Center
     ) {
         if (isMovable) {
@@ -183,7 +194,6 @@ private fun BoxTokenWithGlow(
                 .matchParentSize()
                 .clip(CircleShape)
                 .background(ludoColorOf(tokenColor))
-                .border(1.dp, Color.White.copy(alpha = 0.8f), CircleShape)
                 .clickable(enabled = isMovable, onClick = onTap)
         )
     }
@@ -230,7 +240,11 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
         // andar se halka andhera aur ek inner-shadow jaisa ring, taake lagay ke
         // token ek gol khanay ke andar tika hua hai. Compose mein asal inset-shadow
         // nahi hoti isliye radial-gradient se woh hi "dab" wala look banaya hai.
-        state.players.forEach { color ->
+        // NOTE: sockets hamesha sab 4 gharon mein dikhte hain (2P mode mein bhi) —
+        // chahe woh color is match mein use ho ya na ho. Asal HTML ke renderYardSockets()
+        // jaisa hoobahoo: sirf tokens (asal gotiyan) unused colors ke liye gayab hoti
+        // hain, dabbe (sockets) hamesha sab 4 colors ke liye render hote hain.
+        LudoColor.entries.forEach { color ->
             val density = LocalDensity.current
             COLOR_META.getValue(color).yard.forEach { (yx, yy) ->
                 val leftPct = BOARD_INSET_PCT + (yx / 100f) * BOARD_SPAN_PCT + YARD_ADJUST
@@ -375,19 +389,26 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     !state.isMoving.value &&
                     t.idx in state.movable
 
-                val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "tokenX")
-                val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(230), label = "tokenY")
+                // key(color, idx) — token ki asal "identity" (color+idx) se bandha hua
+                // animation-state, iske bagair jab tokens yard se nikalte ya kisi cell
+                // mein group/count badalta (stack change) to Compose galat slot ka
+                // purana animateDpAsState reuse kar leta tha, jis se token ki position
+                // baar-baar idhar-udhar "jump/change" hoti dikhti thi.
+                key(t.color, t.idx) {
+                    val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "tokenX")
+                    val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(230), label = "tokenY")
 
-                BoxTokenWithGlow(
-                    tokenSizeDp = tokenSizeDp,
-                    animX = animX,
-                    animY = animY,
-                    isMovable = isMovable,
-                    tokenColor = t.color,
-                    imageUrl = TOKEN_IMG[t.color],
-                    contentDescription = "${t.color} token ${t.idx}",
-                    onTap = { onTokenTap(t.color, t.idx) }
-                )
+                    BoxTokenWithGlow(
+                        tokenSizeDp = tokenSizeDp,
+                        animX = animX,
+                        animY = animY,
+                        isMovable = isMovable,
+                        tokenColor = t.color,
+                        imageUrl = TOKEN_IMG[t.color],
+                        contentDescription = "${t.color} token ${t.idx}",
+                        onTap = { onTokenTap(t.color, t.idx) }
+                    )
+                }
             }
         }
 
@@ -410,19 +431,21 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     !state.isMoving.value &&
                     i in state.movable
 
-                val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "yardTokenX")
-                val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(230), label = "yardTokenY")
+                key(color, i) {
+                    val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "yardTokenX")
+                    val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(230), label = "yardTokenY")
 
-                BoxTokenWithGlow(
-                    tokenSizeDp = tokenSizeDp,
-                    animX = animX,
-                    animY = animY,
-                    isMovable = isMovable,
-                    tokenColor = color,
-                    imageUrl = TOKEN_IMG[color],
-                    contentDescription = "$color token $i",
-                    onTap = { onTokenTap(color, i) }
-                )
+                    BoxTokenWithGlow(
+                        tokenSizeDp = tokenSizeDp,
+                        animX = animX,
+                        animY = animY,
+                        isMovable = isMovable,
+                        tokenColor = color,
+                        imageUrl = TOKEN_IMG[color],
+                        contentDescription = "$color token $i",
+                        onTap = { onTokenTap(color, i) }
+                    )
+                }
             }
         }
     }
