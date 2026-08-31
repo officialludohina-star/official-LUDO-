@@ -30,6 +30,7 @@ import com.voiceludo.app.ui.voiceparty.GmailLoginScreen
 import com.voiceludo.app.ui.voiceparty.GmailSignupScreen
 import com.voiceludo.app.ui.voiceparty.SetPasswordScreen
 import com.voiceludo.app.ui.voiceparty.YallaHomeScreen
+import com.voiceludo.app.ui.voiceparty.ProfileEditScreen
 
 // Poori app ka navigation graph — Voice Party (login/home) aur Ludo (mode-select/game)
 // dono yahan se navigate hote hain, sab kuch native Kotlin/Compose mein.
@@ -108,6 +109,7 @@ class MainActivity : ComponentActivity() {
                             SetPasswordScreen(navController, method = method, contact = contact)
                         }
                         composable("vp_home") { YallaHomeScreen(navController) }
+                        composable("vp_profile_edit") { ProfileEditScreen(navController) }
                         composable("ludo_mode_select") { LudoModeSelectScreen(navController) }
                         composable("ludo_game/{mode}/{players}/{magic}") { backStackEntry ->
                             val mode = backStackEntry.arguments?.getString("mode") ?: "classic"

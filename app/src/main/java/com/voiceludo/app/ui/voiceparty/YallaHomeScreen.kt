@@ -82,7 +82,7 @@ fun YallaHomeScreen(navController: NavController) {
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp)
             ) {
-                TopBar()
+                TopBar(onAvatarClick = { navController.navigate("vp_profile_edit") })
                 Spacer(Modifier.height(6.dp))
                 StatRow()
                 Spacer(Modifier.height(28.dp))
@@ -94,14 +94,23 @@ fun YallaHomeScreen(navController: NavController) {
 }
 
 @Composable
-private fun TopBar() {
+private fun TopBar(onAvatarClick: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Home ka avatar hamesha profile screen mein save ki hui photo dikhata hai
+    // (HTML ke #homeAvatarImg jaisa) — agar kuch save nahi hui to default icon.
+    val savedAvatar = ProfileStore.get(context).avatarUri
+    val avatarModel: Any = when {
+        savedAvatar.isEmpty() -> "file:///android_asset/img/user-icon.png"
+        savedAvatar.startsWith("http") -> savedAvatar
+        else -> java.io.File(savedAvatar)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(46.dp).homeLayout("avatar")) {
+        Box(modifier = Modifier.size(46.dp).homeLayout("avatar").clickable(onClick = onAvatarClick)) {
             Box(
                 modifier = Modifier
                     .size(46.dp)
@@ -110,10 +119,10 @@ private fun TopBar() {
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
-                    model = "file:///android_asset/img/user-icon.png",
+                    model = avatarModel,
                     contentDescription = "avatar",
-                    modifier = Modifier.size(46.dp),
-                    contentScale = ContentScale.Fit
+                    modifier = Modifier.size(46.dp).clip(CircleShape),
+                    contentScale = if (savedAvatar.isEmpty()) ContentScale.Fit else ContentScale.Crop
                 )
             }
             Box(
