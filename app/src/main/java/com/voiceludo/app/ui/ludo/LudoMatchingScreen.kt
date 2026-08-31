@@ -95,17 +95,44 @@ fun LudoMatchingScreen(
             Spacer(Modifier.height(30.dp))
 
             // Players — gif ab yahan har slot ke andar chalti hai
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.padding(horizontal = 14.dp)
-            ) {
-                for (i in 0 until players) {
-                    MatchPlayerSlot(
-                        label = if (i == 0) "Aap" else "Player",
-                        calib = calibs[i],
-                        highlighted = panelOpen && selectedSlot == i,
-                        onTap = { selectedSlot = i; panelOpen = true }
-                    )
+            // 4 players ho to 2x2 grid (2 rows) taake koi icon screen se bahar/cut na ho,
+            // warna ek hi row mein sab dikhte hain
+            if (players == 4) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        for (i in 0 until 2) {
+                            MatchPlayerSlot(
+                                label = if (i == 0) "Aap" else "Player",
+                                calib = calibs[i],
+                                highlighted = panelOpen && selectedSlot == i,
+                                onTap = { selectedSlot = i; panelOpen = true }
+                            )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        for (i in 2 until 4) {
+                            MatchPlayerSlot(
+                                label = "Player",
+                                calib = calibs[i],
+                                highlighted = panelOpen && selectedSlot == i,
+                                onTap = { selectedSlot = i; panelOpen = true }
+                            )
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp)
+                ) {
+                    for (i in 0 until players) {
+                        MatchPlayerSlot(
+                            label = if (i == 0) "Aap" else "Player",
+                            calib = calibs[i],
+                            highlighted = panelOpen && selectedSlot == i,
+                            onTap = { selectedSlot = i; panelOpen = true }
+                        )
+                    }
                 }
             }
         }
