@@ -31,20 +31,19 @@ val CardRealBorder = Color(0xFF0a7a42)
 @Composable
 fun LoginHeaderBar(
     title: String,
-    headerColor: Color,
-    padding: Int = 12,      // bar ke andar ka gap (dp) — 1-200
-    titleSize: Int = 16,    // title text ka size (sp) — 1-200
+    headerColor: Color = Color.Transparent,
+    padding: Int = 12,
+    titleSize: Int = 22,
     onClose: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(headerColor)
-            .padding(padding.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = 14.dp, vertical = padding.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Spacer(Modifier.width(32.dp))
+        Spacer(Modifier.width(40.dp))
         Text(
             title,
             color = Color.White,
@@ -55,12 +54,12 @@ fun LoginHeaderBar(
         )
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.18f))
+                .background(Color(0xFF2C8F72).copy(alpha = 0.82f))
                 .clickable(onClick = onClose),
             contentAlignment = Alignment.Center
-        ) { Text("\u2715", color = Color.White) }
+        ) { Text("\u2715", color = Color.White, fontSize = 25.sp) }
     }
 }
 
@@ -80,32 +79,32 @@ fun LoginCard(showTopBorder: Boolean = true, content: @Composable ColumnScope.()
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (showTopBorder)
-                    Modifier.background(CardBorderGradient, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
-                        .padding(3.dp)
-                else Modifier
-            )
+            .padding(horizontal = 8.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFFE6FBF5).copy(alpha = 0.94f))
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-        ) {
-            AsyncImage(
-                model = CARD_BG_IMG,
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier.matchParentSize()
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                content = content
-            )
-        }
+                .padding(20.dp),
+            content = content
+        )
     }
+}
+
+@Composable
+fun RemoteImageButton(
+    imageUrl: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AsyncImage(
+        model = imageUrl,
+        contentDescription = contentDescription,
+        contentScale = ContentScale.FillBounds,
+        modifier = modifier.clickable(onClick = onClick)
+    )
 }
 
 @Composable

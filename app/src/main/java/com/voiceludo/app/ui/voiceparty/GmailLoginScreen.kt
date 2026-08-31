@@ -9,7 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -20,17 +19,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
 private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
-
-// ===== SIZE KNOBS — yahan number badal kar size/position adjust karo (1-200 range) =====
-// Email icon badge (green box, Sign Up jaisa) ka size
-private val EMAIL_ICON_BOX_SIZE = 40   // pura box kitna bara (dp)
-private val EMAIL_ICON_TEXT_SIZE = 16  // andar wale ✉️ symbol ka size (sp)
-// Green "Login" header bar ki height/padding
-private val HEADER_PADDING = 12        // header bar ke andar ka gap (dp)
-private val HEADER_TITLE_SIZE = 16     // "Login" text ka size (sp)
-// Login button ka size
-private val LOGIN_BTN_HEIGHT = 46      // button ki height (dp)
-// =======================================================================================
+private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA0012.jpg"
+private const val LOGIN_BUTTON = "https://i.postimg.cc/PqgDL1c1/IMG-20260831-WA0014.jpg"
 
 @Composable
 fun GmailLoginScreen(navController: NavController) {
@@ -40,49 +30,43 @@ fun GmailLoginScreen(navController: NavController) {
     var errorText by remember { mutableStateOf("") }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Jungle background — same as login screen
         AsyncImage(
             model = LOGIN_BG,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)))
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.20f)))
 
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {
-            // Sign Up jaisa hi green "Login" header bar — same panel dono screens par.
-            LoginHeaderBar("Login", Color(0xFF0a7a42), HEADER_PADDING, HEADER_TITLE_SIZE) { navController.popBackStack() }
+            LoginHeaderBar("Login", onClose = { navController.popBackStack() })
 
             LoginCard {
-                // Email field — Sign Up jaisa hi green icon badge.
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Box(
+                    AsyncImage(
+                        model = EMAIL_ICON,
+                        contentDescription = "Email",
+                        contentScale = ContentScale.FillBounds,
                         modifier = Modifier
-                            .size(EMAIL_ICON_BOX_SIZE.dp)
-                            .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
-                            .background(Color(0xFF0a7a42)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("\u2709\uFE0F", color = Color.White, fontWeight = FontWeight.Bold, fontSize = EMAIL_ICON_TEXT_SIZE.sp)
-                    }
+                            .width(112.dp)
+                            .height(56.dp)
+                    )
                     RealInput(
                         email, { email = it; errorText = "" }, "Enter email address",
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
 
-                // Password field
                 RealInput(
                     pass, { pass = it; errorText = "" },
                     "Enter password", isPassword = true
                 )
 
-                // Error
                 if (errorText.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -96,44 +80,43 @@ fun GmailLoginScreen(navController: NavController) {
 
                 Spacer(Modifier.height(16.dp))
 
-                // Login button — password khali ho to grey/disabled, kuch bhi type
-                // hote hi green/active ho jata hai.
                 val loginEnabled = pass.isNotBlank()
-                Button(
-                    onClick = {
-                        when {
-                            email.isBlank() || pass.isBlank() ->
-                                errorText = "Please enter your email and password."
-                            else -> when (val result = AccountStore.login(context, "gmail", email, pass)) {
-                                is AccountStore.LoginResult.Success -> {
-                                    AccountStore.saveSession(context, "gmail", email)
-                                    navController.navigate("vp_home")
+                if (loginEnabled) {
+                    RemoteImageButton(
+                        imageUrl = LOGIN_BUTTON,
+                        contentDescription = "Login",
+                        onClick = {
+                            when {
+                                email.isBlank() || pass.isBlank() ->
+                                    errorText = "Please enter your email and password."
+                                else -> when (val result = AccountStore.login(context, "gmail", email, pass)) {
+                                    is AccountStore.LoginResult.Success -> {
+                                        AccountStore.saveSession(context, "gmail", email)
+                                        navController.navigate("vp_home")
+                                    }
+                                    AccountStore.LoginResult.NoAccount ->
+                                        errorText = "No account found with this email. Please sign up first."
+                                    AccountStore.LoginResult.WrongPassword ->
+                                        errorText = "Incorrect password. Please try again."
                                 }
-                                AccountStore.LoginResult.NoAccount ->
-                                    errorText = "No account found with this email. Please sign up first."
-                                AccountStore.LoginResult.WrongPassword ->
-                                    errorText = "Incorrect password. Please try again."
                             }
-                        }
-                    },
-                    enabled = loginEnabled,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0a7a42),
-                        disabledContainerColor = Color(0xFFbdbdbd)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(LOGIN_BTN_HEIGHT.dp)
-                ) {
-                    Text("Login", color = Color.White, fontWeight = FontWeight.Bold)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(54.dp)
+                    )
+                } else {
+                    Button(
+                        onClick = {},
+                        enabled = false,
+                        colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFFbdbdbd)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(54.dp)
+                    ) { Text("Login", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
 
-                Spacer(Modifier.height(4.dp))
-
-                // Sign Up link
                 LinkRow(
                     leftText = "Forgot Password?",
                     rightText = "Sign Up",
-                    onLeft = { /* TODO: forgot password screen */ },
+                    onLeft = { },
                     onRight = { navController.navigate("vp_gmail_signup") }
                 )
             }

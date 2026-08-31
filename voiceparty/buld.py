@@ -6,6 +6,7 @@ import getpass
 import subprocess
 import urllib.request
 import urllib.error
+import http.client
 
 FIXED_REPO_NAME = "official-LUDO-"
 
@@ -23,14 +24,33 @@ def api_request(url, token, method="GET", data=None):
     if data:
         req.data = json.dumps(data).encode("utf-8")
         req.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        print(f"\n[ERROR] GitHub API ({e.code}): {e.read().decode('utf-8')}")
-        sys.exit(1)
+    # GitHub API responses can occasionally be cut short on mobile/Termux.
+    # Retry the complete request instead of crashing with http.client.IncompleteRead.
+    last_error = None
+    for attempt in range(1, 5):
+        try:
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                raw = resp.read()
+                return json.loads(raw.decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            try:
+                detail = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                detail = str(e)
+            print(f"\n[ERROR] GitHub API ({e.code}): {detail}")
+            sys.exit(1)
+        except (http.client.IncompleteRead, urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            last_error = e
+            if attempt < 4:
+                wait = attempt * 2
+                print(f"\n[WARN] GitHub response was incomplete/connection failed (attempt {attempt}/4). Retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                print(f"\n[ERROR] GitHub API request failed after 4 attempts: {e}")
+                sys.exit(1)
+    raise last_error
 
 def ensure_repo_exists(username, token):
     repo_url = f"https://api.github.com/repos/{username}/{FIXED_REPO_NAME}"
@@ -101,7 +121,7 @@ def main():
     run_command("git remote remove origin 2>/dev/null")
     run_command(f"git remote add origin {remote_url}")
 
-    runs_url = f"https://api.github.com/repos/{username}/{FIXED_REPO_NAME}/actions/runs"
+    runs_url = f"https://api.github.com/repos/{username}/{FIXED_REPO_NAME}/actions/runs?per_page=10"
     initial_runs_data = api_request(runs_url, token)
     latest_old_run_id = None
     if initial_runs_data and initial_runs_data.get("workflow_runs"):

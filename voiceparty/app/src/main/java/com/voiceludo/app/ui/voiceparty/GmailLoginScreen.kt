@@ -46,16 +46,12 @@ fun GmailLoginScreen(navController: NavController) {
             LoginCard {
                 // Email field
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Color(0xFF0a7a42),
-                                RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-                            )
-                            .padding(horizontal = 12.dp, vertical = 14.dp)
-                    ) {
-                        Text("\u2709\uFE0F Email", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
+                    AsyncImage(
+                        model = "file:///android_asset/img/ui_email_icon.jpg",
+                        contentDescription = "Email",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(56.dp)
+                    )
                     RealInput(
                         email, { email = it; errorText = "" }, "Enter email address",
                         modifier = Modifier.weight(1f)
