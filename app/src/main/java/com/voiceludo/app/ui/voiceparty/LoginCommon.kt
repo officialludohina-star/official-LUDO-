@@ -70,12 +70,16 @@ val CardBorderGradient = Brush.verticalGradient(
 private const val CARD_BG_IMG = "file:///android_asset/img/bghome-1295ddb.png"
 
 @Composable
-fun LoginCard(content: @Composable ColumnScope.() -> Unit) {
+fun LoginCard(showTopBorder: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardBorderGradient, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
-            .padding(3.dp)
+            .then(
+                if (showTopBorder)
+                    Modifier.background(CardBorderGradient, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
+                        .padding(3.dp)
+                else Modifier
+            )
     ) {
         Box(
             modifier = Modifier

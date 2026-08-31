@@ -119,11 +119,12 @@ class MainActivity : ComponentActivity() {
                             val betIndex = backStackEntry.arguments?.getString("betIndex")?.toIntOrNull() ?: 0
                             LudoMatchingScreen(navController, mode = mode, players = players, magic = magic, betIndex = betIndex)
                         }
-                        composable("ludo_game/{mode}/{players}/{magic}") { backStackEntry ->
+                        composable("ludo_game/{mode}/{players}/{magic}/{betIndex}") { backStackEntry ->
                             val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
                             val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4
                             val magic = backStackEntry.arguments?.getString("magic")?.toBooleanStrictOrNull() ?: false
-                            LudoGameScreen(navController, mode = mode, players = players, magic = magic)
+                            val betIndex = backStackEntry.arguments?.getString("betIndex")?.toIntOrNull() ?: 0
+                            LudoGameScreen(navController, mode = mode, players = players, magic = magic, betIndex = betIndex)
                         }
                     }
                 }

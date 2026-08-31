@@ -42,16 +42,19 @@ import kotlin.math.roundToInt
 private enum class CornerPos { POS_TL, POS_TR, POS_BL, POS_BR }
 
 @Composable
-fun LudoGameScreen(navController: NavController, mode: String, players: Int, magic: Boolean = false) {
+fun LudoGameScreen(navController: NavController, mode: String, players: Int, magic: Boolean = false, betIndex: Int = 0) {
     val ludoMode = LudoMode.valueOf(mode)
     val colorList = if (players == 4) PLAYER_COLORS_4P else PLAYER_COLORS_2P
     val state = remember { LudoGameState(ludoMode, colorList, magic) }
+    val bet = BET_OPTIONS.getOrElse(betIndex) { BET_OPTIONS.first() }
+    val totalPool = bet * players
 
     // Bot turns ab alag se manage nahi karne parte — state.rollDice()/advanceTurn khud
     // hi (asal HTML ke maybeBotTurn jaisa) bot ki agli roll/chain automatically chala
     // dete hain, chahe extra-turn (capture/6) kitni hi baar mile.
 
     var showSettings by remember { mutableStateOf(false) }
+    var showBetInfo by remember { mutableStateOf(false) }
     var soundOn by remember { mutableStateOf(true) }
 
     // Asal HTML: window.COLOR_TO_POS — 4P mein har color apne board-quadrant ke
@@ -112,7 +115,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 )
                 AsyncImage(
                     model = BET_INFO_ICON, contentDescription = "bet info",
-                    modifier = Modifier.size(44.dp).clickable { /* bet info popup */ }
+                    modifier = Modifier.size(44.dp).clickable { showBetInfo = true }
                 )
             }
         }
@@ -293,6 +296,35 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = { navController.popBackStack() }) { Text("Wapis Mode Select") }
             }
+        }
+
+        // Trophy/bet-info icon tap par yeh dikhata hai — kitne coins laga kar yeh
+        // game shuru hua tha aur total pool kitna hai.
+        if (showBetInfo) {
+            AlertDialog(
+                onDismissRequest = { showBetInfo = false },
+                title = { Text("Bet Info", fontWeight = FontWeight.Black) },
+                text = {
+                    Column {
+                        Text(
+                            "Aap ne is game mein $bet coins laga kar khela hai.",
+                            fontWeight = FontWeight.Bold, fontSize = 14.sp
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Entry Coins: $bet",
+                            color = Color(0xFF0a7a42), fontWeight = FontWeight.Black, fontSize = 14.sp
+                        )
+                        Text(
+                            "Total Pool ($players players): $totalPool",
+                            color = Color(0xFF0a7a42), fontWeight = FontWeight.Black, fontSize = 14.sp
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showBetInfo = false }) { Text("Close") }
+                }
+            )
         }
     }
 }

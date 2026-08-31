@@ -45,25 +45,29 @@ import java.io.File
 // ============================================================================
 
 private const val DEFAULT_AVATAR = "file:///android_asset/img/user-icon.png"
-private const val MALE_ICON = "https://i.postimg.cc/DwHJ7gnk/male.webp"
-private const val FEMALE_ICON = "https://i.postimg.cc/ncVQ2r04/female.webp"
 private const val UPLOAD_PHOTO_ICON = "https://i.postimg.cc/vZfM6Lf9/IMG-20260831-WA0011.jpg"
 
-// HTML gallery grid ke wahi preset "Default Head Picture" avatars
-private val PRESET_AVATARS = listOf(
-    "https://file.yalla.games/DefaultHeadPicture/54b9edc6-f2fa-473b-bbdf-7cac5bdbcad1/49b69044-c8e8-4579-9a68-bb88b8c036d8.png",
-    "https://file.yalla.games/DefaultHeadPicture/9d01bbe4-7fcf-4e6a-97b7-060d99a880e6/c819f6e8-27a3-4396-b0f8-7721fbcdeeeb.png",
-    "https://file.yalla.games/DefaultHeadPicture/99b51e8e-ee24-4a1b-8e39-a5e8091b8891/c32ba635-d3e1-45e8-b1d0-26b1258e7e5f.png",
-    "https://file.yalla.games/DefaultHeadPicture/83da3bf1-bd83-46c6-97b1-bb55f6d78295/e6f9e613-358b-4423-b5ab-86091f518ee4.png",
-    "https://file.yalla.games/DefaultHeadPicture/b2f235f2-56fb-4ce6-b512-132fc73df510/01368b10-dbac-480c-aa4b-87443155f857.png",
-    "https://file.yalla.games/DefaultHeadPicture/51d07a07-649a-4166-9d1b-ef9716d22037/fc3f4a15-a9df-4455-994e-958fb1b2aac2.png",
-    "https://file.yalla.games/DefaultHeadPicture/f55e13e0-8628-4386-bf51-15f6b6826898/28c737cd-0060-40a1-8014-08f33824e15d.png",
-    "https://file.yalla.games/DefaultHeadPicture/3b8a7503-af7b-47cc-9922-1d9e0cab1209/eae4363d-2f23-445a-9051-a898d275c073.png",
-    "https://file.yalla.games/DefaultHeadPicture/681d0154-7e0c-4455-a5d3-d29591aeb1b1/26640f5a-282f-4726-9a7b-907569406824.png",
-    "https://file.yalla.games/DefaultHeadPicture/effa19d8-307e-47ca-8c4c-c611a80a0485/ca627e98-daa4-4db0-8bc5-e48da87baa52.png",
-    "https://file.yalla.games/DefaultHeadPicture/8ad4a909-12bd-4bd8-bb2e-ccd41e5a3192/9a2dd4a4-dcdd-403e-a576-1041c5976cf9.png",
-    "https://file.yalla.games/DefaultHeadPicture/4fc36131-a52b-4d1d-8a56-7568f07ed5bc/0201bb59-6e01-4a35-94c9-b2233e233720.png"
-)
+// Male/Female icon ab local hain (koi remote URL nahi) — pehle female.webp jaisa
+// remote link kabhi load hi nahi hota tha, isliye gender row mein icon ghayab
+// dikhta tha. Ab hamesha reliably dikhta hai, network ki zaroorat nahi.
+@Composable
+private fun GenderIcon(gender: String, size: androidx.compose.ui.unit.Dp) {
+    val isFemale = gender == "female"
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(if (isFemale) Color(0xFFff4fa3) else Color(0xFF3d8bff)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            if (isFemale) "\u2640" else "\u2642",
+            color = Color.White,
+            fontWeight = FontWeight.Black,
+            fontSize = (size.value * 0.6f).sp
+        )
+    }
+}
 
 // COUNTRY_LIST (CountryList.kt) already "🇵🇰 +92 Pakistan" jaisi 195 entries rakhti
 // hai (phone signup dropdown ke liye) — flag modal ke liye usi se icon+name nikal
@@ -89,7 +93,6 @@ fun ProfileEditScreen(navController: NavController) {
     var showBioDialog by remember { mutableStateOf(false) }
     var showGenderDialog by remember { mutableStateOf(false) }
     var showFlagDialog by remember { mutableStateOf(false) }
-    var showGalleryDialog by remember { mutableStateOf(false) }
 
     // Device ki photo picker (Android system picker — koi runtime permission nahi
     // chahiye). Photo internal storage mein copy kar dete hain taake app restart
@@ -105,7 +108,6 @@ fun ProfileEditScreen(navController: NavController) {
                 }
                 profile = profile.copy(avatarUri = outFile.absolutePath)
                 ProfileStore.saveAvatar(context, outFile.absolutePath)
-                showGalleryDialog = false
             } catch (_: Exception) {
                 // Photo copy fail hui to chup chaap ignore — avatar purana hi rahega
             }
@@ -149,11 +151,9 @@ fun ProfileEditScreen(navController: NavController) {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                // ---- Avatar + Gallery button ----
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                // ---- Avatar + upload badge — koi "Choose avatar" popup nahi, badge
+                // par tap karte hi seedha gallery/photo-picker khul jata hai. ----
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val avatarModel = when {
                         profile.avatarUri.isEmpty() -> DEFAULT_AVATAR
                         profile.avatarUri.startsWith("http") -> profile.avatarUri
@@ -176,15 +176,28 @@ fun ProfileEditScreen(navController: NavController) {
                             contentScale = if (profile.avatarUri.isEmpty()) ContentScale.Fit else ContentScale.Crop
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
+                    // Upload badge — dp ke sath bilkul juda hua, bottom-right corner,
+                    // sirf ek button, tap karte hi gallery open ho jati hai.
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .align(Alignment.Center)
+                            .offset(x = 34.dp, y = 34.dp)
+                            .size(30.dp)
+                            .clip(CircleShape)
                             .background(ProfileGreenAccent)
-                            .clickable { showGalleryDialog = true }
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                            .border(2.dp, Color.White, CircleShape)
+                            .clickable {
+                                pickPhoto.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("\uD83D\uDDBC\uFE0F Gallery", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        AsyncImage(
+                            model = UPLOAD_PHOTO_ICON,
+                            contentDescription = "upload photo",
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
 
@@ -225,11 +238,7 @@ fun ProfileEditScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(
-                            model = if (profile.gender == "female") FEMALE_ICON else MALE_ICON,
-                            contentDescription = profile.gender,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        GenderIcon(profile.gender, 24.dp)
                         Spacer(Modifier.width(6.dp))
                         Text(
                             profile.gender.replaceFirstChar { it.uppercase() },
@@ -321,11 +330,7 @@ fun ProfileEditScreen(navController: NavController) {
                                 showGenderDialog = false
                             })
                             Spacer(Modifier.width(6.dp))
-                            AsyncImage(
-                                model = if (value == "female") FEMALE_ICON else MALE_ICON,
-                                contentDescription = label,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            GenderIcon(value, 20.dp)
                             Spacer(Modifier.width(6.dp))
                             Text(label)
                         }
@@ -350,73 +355,6 @@ fun ProfileEditScreen(navController: NavController) {
         )
     }
 
-    // ---- Gallery modal (preset avatars + pick from device) ----
-    if (showGalleryDialog) {
-        AlertDialog(
-            onDismissRequest = { showGalleryDialog = false },
-            title = { Text("Choose avatar", fontWeight = FontWeight.Black) },
-            text = {
-                Column {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(ProfileGreenAccent)
-                            .clickable {
-                                pickPhoto.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            }
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            AsyncImage(
-                                model = UPLOAD_PHOTO_ICON,
-                                contentDescription = "upload",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Apni gallery se photo chunein", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text("Ya default avatar chunein:", fontSize = 12.sp, color = ProfileGreenDark, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        modifier = Modifier.heightIn(max = 260.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(PRESET_AVATARS) { url ->
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .border(2.dp, Color(0xFFb5dfb8), CircleShape)
-                                    .clickable {
-                                        profile = profile.copy(avatarUri = url)
-                                        ProfileStore.saveAvatar(context, url)
-                                        showGalleryDialog = false
-                                    }
-                            ) {
-                                AsyncImage(
-                                    model = url,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showGalleryDialog = false }) { Text("Close") }
-            }
-        )
-    }
 }
 
 @Composable

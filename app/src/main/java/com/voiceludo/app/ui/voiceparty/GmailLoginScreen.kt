@@ -1,7 +1,9 @@
 package com.voiceludo.app.ui.voiceparty
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -9,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -19,6 +22,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
 private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
+private const val EMAIL_ICON = "https://i.postimg.cc/GhVRgSb8/IMG-20260831-WA0012.jpg"
 
 @Composable
 fun GmailLoginScreen(navController: NavController) {
@@ -41,21 +45,27 @@ fun GmailLoginScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {
-            LoginHeaderBar("Login", Color(0xFF0a7a42)) { navController.popBackStack() }
+            // Green "Login" header bar hata diya — sirf ek chhota close (X) button,
+            // koi green background nahi, seedha jungle background par float karta hai.
+            Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.CenterEnd) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .clickable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center
+                ) { Text("\u2715", color = Color.White) }
+            }
 
-            LoginCard {
-                // Email field
+            LoginCard(showTopBorder = false) {
+                // Email field — icon ab apne asal size mein, bina green badge ke.
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Color(0xFF0a7a42),
-                                RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-                            )
-                            .padding(horizontal = 12.dp, vertical = 14.dp)
-                    ) {
-                        Text("\u2709\uFE0F Email", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
+                    AsyncImage(
+                        model = EMAIL_ICON,
+                        contentDescription = "Email",
+                        modifier = Modifier.size(40.dp).padding(end = 8.dp)
+                    )
                     RealInput(
                         email, { email = it; errorText = "" }, "Enter email address",
                         modifier = Modifier.weight(1f)
@@ -84,15 +94,19 @@ fun GmailLoginScreen(navController: NavController) {
 
                 Spacer(Modifier.height(16.dp))
 
-                // Login button
+                // Login button — password khali ho to grey/disabled, kuch bhi type
+                // hote hi green/active ho jata hai.
+                val loginEnabled = pass.isNotBlank()
                 Button(
                     onClick = {
                         when {
                             email.isBlank() || pass.isBlank() ->
                                 errorText = "Please enter your email and password."
-                            else -> when (AccountStore.login(context, "gmail", email, pass)) {
-                                is AccountStore.LoginResult.Success ->
+                            else -> when (val result = AccountStore.login(context, "gmail", email, pass)) {
+                                is AccountStore.LoginResult.Success -> {
+                                    AccountStore.saveSession(context, "gmail", email)
                                     navController.navigate("vp_home")
+                                }
                                 AccountStore.LoginResult.NoAccount ->
                                     errorText = "No account found with this email. Please sign up first."
                                 AccountStore.LoginResult.WrongPassword ->
@@ -100,7 +114,11 @@ fun GmailLoginScreen(navController: NavController) {
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0a7a42)),
+                    enabled = loginEnabled,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF0a7a42),
+                        disabledContainerColor = Color(0xFFbdbdbd)
+                    ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().height(46.dp)
                 ) {

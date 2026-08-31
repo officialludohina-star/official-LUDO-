@@ -124,4 +124,27 @@ object AccountStore {
     }
 
     fun verifyOtp(entered: String): Boolean = entered == currentOtp || entered == "1234"
+
+    // ---- Current session (kis method/ID se ab login hai) — Settings panel mein
+    // dikhane ke liye. Login success par saveSession() call hota hai, Logout par clear.
+    private const val SESSION_METHOD = "session_method"
+    private const val SESSION_CONTACT = "session_contact"
+
+    fun saveSession(context: Context, method: String, contact: String) {
+        prefs(context).edit()
+            .putString(SESSION_METHOD, method)
+            .putString(SESSION_CONTACT, contact)
+            .apply()
+    }
+
+    // Pair(method, contact) — dono null hain to koi bhi logged in nahi (Guest)
+    fun getSession(context: Context): Pair<String, String>? {
+        val method = prefs(context).getString(SESSION_METHOD, null) ?: return null
+        val contact = prefs(context).getString(SESSION_CONTACT, null) ?: return null
+        return method to contact
+    }
+
+    fun clearSession(context: Context) {
+        prefs(context).edit().remove(SESSION_METHOD).remove(SESSION_CONTACT).apply()
+    }
 }

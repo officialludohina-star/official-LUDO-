@@ -141,7 +141,7 @@ const val BET_PLUS_ICON = "file:///android_asset/img/regression-coin-add-check.w
 const val COIN_ICON = "file:///android_asset/img/coin.webp"
 const val GOLDEN_DICE_ICON = "file:///android_asset/img/icon-golden-dice.webp"
 
-val BET_OPTIONS = listOf(500, 2000, 10000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000)
+val BET_OPTIONS = listOf(500, 2000, 10000, 20000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000, 20000000)
 
 // Top bar + settings panel ke icons (asal HTML se hoobahoo)
 const val SETTINGS_ICON = "file:///android_asset/img/system.webp"

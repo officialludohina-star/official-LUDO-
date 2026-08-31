@@ -46,7 +46,7 @@ fun LudoMatchingScreen(
 
     LaunchedEffect(Unit) {
         delay(2500)
-        navController.navigate("ludo_game/$mode/$players/$magic") {
+        navController.navigate("ludo_game/$mode/$players/$magic/$betIndex") {
             popUpTo("ludo_matching/$mode/$players/$magic/$betIndex") { inclusive = true }
         }
     }

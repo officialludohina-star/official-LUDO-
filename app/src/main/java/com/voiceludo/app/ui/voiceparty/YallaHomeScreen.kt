@@ -5,7 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +71,8 @@ private fun Modifier.homeLayout(key: String): Modifier {
 
 @Composable
 fun YallaHomeScreen(navController: NavController) {
+    var showSettingsDialog by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF051a0f))) {
         AsyncImage(
             model = HOME_BG_IMG,
@@ -82,7 +88,10 @@ fun YallaHomeScreen(navController: NavController) {
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp)
             ) {
-                TopBar(onAvatarClick = { navController.navigate("vp_profile_edit") })
+                TopBar(
+                    onAvatarClick = { navController.navigate("vp_profile_edit") },
+                    onSettingsClick = { showSettingsDialog = true }
+                )
                 Spacer(Modifier.height(6.dp))
                 StatRow()
                 Spacer(Modifier.height(28.dp))
@@ -91,10 +100,65 @@ fun YallaHomeScreen(navController: NavController) {
             BottomNav()
         }
     }
+
+    if (showSettingsDialog) {
+        SettingsDialog(
+            onDismiss = { showSettingsDialog = false },
+            onLoggedOut = {
+                showSettingsDialog = false
+                navController.navigate("vp_main") { popUpTo(0) }
+            }
+        )
+    }
 }
 
 @Composable
-private fun TopBar(onAvatarClick: () -> Unit) {
+private fun SettingsDialog(onDismiss: () -> Unit, onLoggedOut: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val session = AccountStore.getSession(context)
+    val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+    val methodLabel = when (session?.first) {
+        "gmail" -> "Gmail"
+        "mobile" -> "Mobile"
+        "facebook" -> "Facebook"
+        else -> "Guest (login nahi hai)"
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Settings", fontWeight = FontWeight.Black) },
+        text = {
+            Column {
+                SettingsInfoRow("Device", deviceName)
+                SettingsInfoRow("Logged in ID", session?.second ?: "—")
+                SettingsInfoRow("Login method", methodLabel)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    AccountStore.clearSession(context)
+                    onLoggedOut()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFcc3333))
+            ) { Text("Logout", color = Color.White, fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
+@Composable
+private fun SettingsInfoRow(label: String, value: String) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(label, fontSize = 11.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+        Text(value, fontSize = 14.sp, color = Color(0xFF222222), fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun TopBar(onAvatarClick: () -> Unit, onSettingsClick: () -> Unit = {}) {
     val context = androidx.compose.ui.platform.LocalContext.current
     // Home ka avatar hamesha profile screen mein save ki hui photo dikhata hai
     // (HTML ke #homeAvatarImg jaisa) — agar kuch save nahi hui to default icon.
@@ -171,7 +235,7 @@ private fun TopBar(onAvatarClick: () -> Unit) {
             modifier = Modifier
                 .size(26.dp)
                 .homeLayout("settings")
-            // TODO: settings screen abhi implement nahi hui — tap yahan add karna
+                .clickable(onClick = onSettingsClick)
         )
     }
 }
