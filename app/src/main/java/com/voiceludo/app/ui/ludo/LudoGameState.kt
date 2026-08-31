@@ -130,7 +130,9 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
 
         if (result == 6) {
             sixStreak++
-            // Teesri lagataar chhakka: poori chain void, seedha turn skip (koi token nahi hilta)
+            // Teesri lagataar chhakka: poori chain void, seedha turn skip (koi token nahi hilta,
+            // pehli do chhakkon ki chaalein — agar hui thin — pehle hi ho chuki hain, sirf yeh
+            // teesra roll waste jata hai)
             if (sixStreak >= 3) {
                 sixStreak = 0
                 savedRolls.clear()
@@ -139,18 +141,15 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
                 advanceTurn(false)
                 return
             }
-            // 6 sirf save hota hai — token bahar nikalne wala icon abhi nahi aata,
-            // agli roll khud (tap ya bot khud-b-khud) karni hai (teesri baar tak).
-            savedRolls.add(6)
-            if (currentIdx.value != 0) {
-                delay(600) // bot khud agli roll kar leta hai
-                rollDice()
-            }
-            return
+        } else {
+            sixStreak = 0
         }
 
-        // Chhakka nahi aaya: chain yahin khatam hoti hai, ye number bhi save list mein jama ho jata hai
-        sixStreak = 0
+        // 6 ho ya na ho — ab har roll turant apna move resolve karti hai (6 ka
+        // bonus — ek extra roll — move ke baad khud milta hai, applyRollToToken/
+        // botResolveChain mein dv==6 check se). Pehle sirf 6 "save" hoti thi aur
+        // koi token nahi chalta tha jab tak agli (dobara) roll na ho — isi wajah
+        // se lagta tha ke "6 aane par token nahi chalta".
         savedRolls.add(result)
         delay(400) // pehle poora number thehar kar dikhay, uske baad hi movable icon aaye
         handleDiceResult()
@@ -172,8 +171,11 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
             computeMovable(color, dv).forEach { ti -> if (ti !in movableSet) movableSet.add(ti) }
         }
         if (movableSet.isEmpty()) {
+            // Agar rolled number(s) mein 6 tha to bhi bonus roll milni chahiye,
+            // chahe koi legal move na bana ho (asal Ludo rule jaisa hi).
+            val rolledSix = savedRolls.contains(6)
             savedRolls.clear()
-            val extra = chainCapture
+            val extra = chainCapture || rolledSix
             chainCapture = false
             advanceTurn(extra)
             return
@@ -278,6 +280,7 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
         }
         val dv = savedRolls[rollIdx]
         savedRolls.removeAt(rollIdx)
+        if (dv == 6) chainCapture = true // 6 chalne par hamesha ek extra roll
 
         val extra = performMove(tokenIdx, dv)
         if (gameOver.value) return
@@ -312,8 +315,9 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
             }
         }
         if (dv == null) {
+            val rolledSix = savedRolls.contains(6)
             savedRolls.clear()
-            val extra = chainCapture
+            val extra = chainCapture || rolledSix
             chainCapture = false
             advanceTurn(extra)
             return
@@ -321,6 +325,7 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
         movable.clear()
         val choice = botPickToken(color, cand, dv)
         savedRolls.removeAt(ri)
+        if (dv == 6) chainCapture = true // 6 chalne par hamesha ek extra roll
 
         val extra = performMove(choice, dv)
         if (gameOver.value) return
