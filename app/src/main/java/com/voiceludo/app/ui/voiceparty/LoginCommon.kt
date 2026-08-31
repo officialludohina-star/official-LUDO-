@@ -14,12 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 
 // index.html ke .card-real / .input-real / header-bar patterns — Facebook/Mobile/Gmail
 // teeno login screens isi styling ko share karti hain.
@@ -62,6 +64,11 @@ val CardBorderGradient = Brush.verticalGradient(
     listOf(Color(0xFF6EE7B7), Color(0xFF17A863), Color(0xFF0a7a42))
 )
 
+// User ki di hui green card/background image — Gmail Login, Sign Up, Set/Reset
+// Password, Mobile aur Facebook Login sab isi LoginCard ko share karte hain, is
+// liye yahan ek jagah badalne se sab jagah apply ho jata hai.
+private const val CARD_BG_IMG = "file:///android_asset/img/bghome-1295ddb.png"
+
 @Composable
 fun LoginCard(content: @Composable ColumnScope.() -> Unit) {
     Box(
@@ -70,13 +77,24 @@ fun LoginCard(content: @Composable ColumnScope.() -> Unit) {
             .background(CardBorderGradient, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
             .padding(3.dp)
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CardRealBg, RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                .padding(16.dp),
-            content = content
-        )
+                .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+        ) {
+            AsyncImage(
+                model = CARD_BG_IMG,
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.matchParentSize()
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
     }
 }
 

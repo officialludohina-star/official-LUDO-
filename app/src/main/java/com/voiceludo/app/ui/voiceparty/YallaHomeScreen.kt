@@ -125,16 +125,6 @@ private fun TopBar(onAvatarClick: () -> Unit) {
                     contentScale = if (savedAvatar.isEmpty()) ContentScale.Fit else ContentScale.Crop
                 )
             }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset(y = 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFff5a1a))
-                    .padding(horizontal = 6.dp, vertical = 1.dp)
-            ) {
-                Text("42", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
-            }
         }
 
         Spacer(Modifier.width(6.dp))

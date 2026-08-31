@@ -23,6 +23,7 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import com.voiceludo.app.ui.ludo.LudoModeSelectScreen
 import com.voiceludo.app.ui.ludo.LudoGameScreen
+import com.voiceludo.app.ui.ludo.LudoMatchingScreen
 import com.voiceludo.app.ui.voiceparty.VoicePartyMainScreen
 import com.voiceludo.app.ui.voiceparty.MobileLoginScreen
 import com.voiceludo.app.ui.voiceparty.FacebookLoginScreen
@@ -111,6 +112,13 @@ class MainActivity : ComponentActivity() {
                         composable("vp_home") { YallaHomeScreen(navController) }
                         composable("vp_profile_edit") { ProfileEditScreen(navController) }
                         composable("ludo_mode_select") { LudoModeSelectScreen(navController) }
+                        composable("ludo_matching/{mode}/{players}/{magic}/{betIndex}") { backStackEntry ->
+                            val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
+                            val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4
+                            val magic = backStackEntry.arguments?.getString("magic")?.toBooleanStrictOrNull() ?: false
+                            val betIndex = backStackEntry.arguments?.getString("betIndex")?.toIntOrNull() ?: 0
+                            LudoMatchingScreen(navController, mode = mode, players = players, magic = magic, betIndex = betIndex)
+                        }
                         composable("ludo_game/{mode}/{players}/{magic}") { backStackEntry ->
                             val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
                             val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4

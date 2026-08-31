@@ -45,6 +45,9 @@ import java.io.File
 // ============================================================================
 
 private const val DEFAULT_AVATAR = "file:///android_asset/img/user-icon.png"
+private const val MALE_ICON = "https://i.postimg.cc/DwHJ7gnk/male.webp"
+private const val FEMALE_ICON = "https://i.postimg.cc/ncVQ2r04/female.webp"
+private const val UPLOAD_PHOTO_ICON = "https://i.postimg.cc/vZfM6Lf9/IMG-20260831-WA0011.jpg"
 
 // HTML gallery grid ke wahi preset "Default Head Picture" avatars
 private val PRESET_AVATARS = listOf(
@@ -222,15 +225,11 @@ fun ProfileEditScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(if (profile.gender == "female") Color(0xFFec4899) else Color(0xFF3b82f6)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(if (profile.gender == "female") "\u2640" else "\u2642", color = Color.White, fontSize = 13.sp)
-                        }
+                        AsyncImage(
+                            model = if (profile.gender == "female") FEMALE_ICON else MALE_ICON,
+                            contentDescription = profile.gender,
+                            modifier = Modifier.size(24.dp)
+                        )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             profile.gender.replaceFirstChar { it.uppercase() },
@@ -322,6 +321,12 @@ fun ProfileEditScreen(navController: NavController) {
                                 showGenderDialog = false
                             })
                             Spacer(Modifier.width(6.dp))
+                            AsyncImage(
+                                model = if (value == "female") FEMALE_ICON else MALE_ICON,
+                                contentDescription = label,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
                             Text(label)
                         }
                     }
@@ -365,7 +370,15 @@ fun ProfileEditScreen(navController: NavController) {
                             .padding(12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("\uD83D\uDCF7 Apni gallery se photo chunein", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(
+                                model = UPLOAD_PHOTO_ICON,
+                                contentDescription = "upload",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Apni gallery se photo chunein", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                     Text("Ya default avatar chunein:", fontSize = 12.sp, color = ProfileGreenDark, fontWeight = FontWeight.Bold)

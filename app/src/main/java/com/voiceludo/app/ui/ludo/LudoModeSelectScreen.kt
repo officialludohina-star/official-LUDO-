@@ -183,7 +183,7 @@ fun LudoModeSelectScreen(navController: NavController) {
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(Brush.verticalGradient(listOf(Color(0xFFffec66), Color(0xFFffb300))))
-                    .clickable { navController.navigate("ludo_game/${mode.name}/$players/$magicOn") }
+                    .clickable { navController.navigate("ludo_matching/${mode.name}/$players/$magicOn/$betIndex") }
                     .padding(vertical = 14.dp),
                 contentAlignment = Alignment.Center
             ) {
