@@ -23,6 +23,27 @@ private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA001
 private const val OBTAIN_BUTTON = "https://i.postimg.cc/dtgJcnTx/IMG-20260831-WA0016.jpg"
 private const val CONFIRM_BUTTON = "https://i.postimg.cc/zf7mvk3P/IMG-20260831-WA0017.jpg"
 
+// ===== SIZE / POSITION KNOBS — number badal kar chota/bara aur upar/nichay/left/right karo =====
+// Email icon (Email likha hua graphic)
+private val EMAIL_ICON_WIDTH = 112     // chota bara (dp) — 1 to 200
+private val EMAIL_ICON_HEIGHT = 56     // chota bara (dp) — 1 to 200
+private val EMAIL_ICON_OFFSET_X = 0    // left(-) / right(+) — -100 to 100
+private val EMAIL_ICON_OFFSET_Y = 0    // upar(-) / nichay(+) — -100 to 100
+// "Enter email address" wala box
+private val EMAIL_INPUT_HEIGHT = 56    // chota bara (dp) — 1 to 200
+private val EMAIL_INPUT_OFFSET_X = 0   // left(-) / right(+) — -100 to 100
+private val EMAIL_INPUT_OFFSET_Y = 0   // upar(-) / nichay(+) — -100 to 100
+// Obtain button
+private val OBTAIN_BTN_WIDTH = 104     // chota bara (dp) — 1 to 200
+private val OBTAIN_BTN_HEIGHT = 52     // chota bara (dp) — 1 to 200
+private val OBTAIN_BTN_OFFSET_X = 0    // left(-) / right(+) — -100 to 100
+private val OBTAIN_BTN_OFFSET_Y = 0    // upar(-) / nichay(+) — -100 to 100
+// Confirm button (poori width use karta hai, isliye sirf height + position)
+private val CONFIRM_BTN_HEIGHT = 54    // chota bara (dp) — 1 to 200
+private val CONFIRM_BTN_OFFSET_X = 0   // left(-) / right(+) — -100 to 100
+private val CONFIRM_BTN_OFFSET_Y = 0   // upar(-) / nichay(+) — -100 to 100
+// ================================================================================================
+
 @Composable
 fun GmailSignupScreen(navController: NavController) {
     val context = LocalContext.current
@@ -55,11 +76,17 @@ fun GmailSignupScreen(navController: NavController) {
                         model = EMAIL_ICON,
                         contentDescription = "Email",
                         contentScale = ContentScale.FillBounds,
-                        modifier = Modifier.width(112.dp).height(56.dp)
+                        modifier = Modifier
+                            .width(EMAIL_ICON_WIDTH.dp)
+                            .height(EMAIL_ICON_HEIGHT.dp)
+                            .offset(x = EMAIL_ICON_OFFSET_X.dp, y = EMAIL_ICON_OFFSET_Y.dp)
                     )
                     RealInput(
                         email, { email = it; errorText = "" }, "Enter email address",
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(EMAIL_INPUT_HEIGHT.dp)
+                            .offset(x = EMAIL_INPUT_OFFSET_X.dp, y = EMAIL_INPUT_OFFSET_Y.dp)
                     )
                 }
 
@@ -90,12 +117,15 @@ fun GmailSignupScreen(navController: NavController) {
                                     }
                                 }
                             },
-                            modifier = Modifier.width(104.dp).height(52.dp)
+                            modifier = Modifier
+                                .width(OBTAIN_BTN_WIDTH.dp)
+                                .height(OBTAIN_BTN_HEIGHT.dp)
+                                .offset(x = OBTAIN_BTN_OFFSET_X.dp, y = OBTAIN_BTN_OFFSET_Y.dp)
                         )
                     } else {
                         Text(
                             "${secondsLeft}s",
-                            modifier = Modifier.width(104.dp),
+                            modifier = Modifier.width(OBTAIN_BTN_WIDTH.dp),
                             textAlign = TextAlign.Center,
                             color = Color(0xFF6d756f),
                             fontWeight = FontWeight.Bold,
@@ -143,7 +173,10 @@ fun GmailSignupScreen(navController: NavController) {
                             else -> navController.navigate("vp_set_password/gmail/$email")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth().height(54.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(CONFIRM_BTN_HEIGHT.dp)
+                        .offset(x = CONFIRM_BTN_OFFSET_X.dp, y = CONFIRM_BTN_OFFSET_Y.dp)
                 )
             }
         }

@@ -22,6 +22,18 @@ private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81b
 private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA0012.jpg"
 private const val LOGIN_BUTTON = "https://i.postimg.cc/PqgDL1c1/IMG-20260831-WA0014.jpg"
 
+// ===== SIZE / POSITION KNOBS — number badal kar chota/bara aur upar/nichay/left/right karo =====
+// Email icon (Email likha hua graphic)
+private val EMAIL_ICON_WIDTH = 112     // chota bara (dp) — 1 to 200
+private val EMAIL_ICON_HEIGHT = 56     // chota bara (dp) — 1 to 200
+private val EMAIL_ICON_OFFSET_X = 0    // left(-) / right(+) khisakne ke liye — -100 to 100
+private val EMAIL_ICON_OFFSET_Y = 0    // upar(-) / nichay(+) khisakne ke liye — -100 to 100
+// "Enter email address" wala box
+private val EMAIL_INPUT_HEIGHT = 56    // chota bara (dp) — 1 to 200
+private val EMAIL_INPUT_OFFSET_X = 0   // left(-) / right(+) — -100 to 100
+private val EMAIL_INPUT_OFFSET_Y = 0   // upar(-) / nichay(+) — -100 to 100
+// ================================================================================================
+
 @Composable
 fun GmailLoginScreen(navController: NavController) {
     val context = LocalContext.current
@@ -51,12 +63,16 @@ fun GmailLoginScreen(navController: NavController) {
                         contentDescription = "Email",
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier
-                            .width(112.dp)
-                            .height(56.dp)
+                            .width(EMAIL_ICON_WIDTH.dp)
+                            .height(EMAIL_ICON_HEIGHT.dp)
+                            .offset(x = EMAIL_ICON_OFFSET_X.dp, y = EMAIL_ICON_OFFSET_Y.dp)
                     )
                     RealInput(
                         email, { email = it; errorText = "" }, "Enter email address",
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(EMAIL_INPUT_HEIGHT.dp)
+                            .offset(x = EMAIL_INPUT_OFFSET_X.dp, y = EMAIL_INPUT_OFFSET_Y.dp)
                     )
                 }
 
