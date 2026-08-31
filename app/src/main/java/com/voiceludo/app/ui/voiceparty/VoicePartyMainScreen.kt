@@ -1,14 +1,14 @@
 package com.voiceludo.app.ui.voiceparty
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -19,8 +19,8 @@ import coil.compose.AsyncImage
 
 // Same jungle/moon background as rest of app
 private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
-private const val FB_ICON   = "https://i.postimg.cc/zvYRnVKB/bind-f-1c2b455.png"
-private const val GMAIL_ICON = "https://i.postimg.cc/9fzTV3C1/bind-e-e8c989f.png"
+private const val FB_ICON   = "https://i.postimg.cc/tR2tPz7G/bind-f-1c2b455.png"
+private const val GMAIL_ICON = "https://i.postimg.cc/63KLVjdr/bind-e-e8c989f.png"
 
 @Composable
 fun VoicePartyMainScreen(navController: NavController) {
@@ -46,14 +46,12 @@ fun VoicePartyMainScreen(navController: NavController) {
             BigIconLoginButton(
                 iconUrl = FB_ICON,
                 label = "Login with Facebook",
-                bgColor = Color(0x993d5afe), // semi-transparent blue
                 onClick = { navController.navigate("vp_facebook_login") }
             )
             // Gmail signup button
             BigIconLoginButton(
                 iconUrl = GMAIL_ICON,
                 label = "Login with Gmail",
-                bgColor = Color(0x990ab85a), // semi-transparent green
                 onClick = { navController.navigate("vp_gmail_login") }
             )
         }
@@ -64,37 +62,29 @@ fun VoicePartyMainScreen(navController: NavController) {
 private fun BigIconLoginButton(
     iconUrl: String,
     label: String,
-    bgColor: Color,
     onClick: () -> Unit
 ) {
-    Button(
-        onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = bgColor),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .height(82.dp)
+            .height(72.dp)
+            .clip(RoundedCornerShape(50))
+            .clickable(onClick = onClick)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Big icon
-            AsyncImage(
-                model = iconUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(52.dp)
-            )
-            Spacer(Modifier.width(14.dp))
-            Text(
-                text = label,
-                color = Color.White,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 17.sp
-            )
-        }
+        // Icon ka apna asal color/design hi poore button ka background banta hai — koi extra color nahi
+        AsyncImage(
+            model = iconUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.CenterStart,
+            modifier = Modifier.fillMaxSize()
+        )
+        Text(
+            text = label,
+            color = Color.White,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 18.sp
+        )
     }
 }
