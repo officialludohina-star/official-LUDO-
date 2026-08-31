@@ -1,7 +1,6 @@
 package com.voiceludo.app.ui.voiceparty
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,15 +12,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 
 // index.html ke .card-real / .input-real / header-bar patterns — Facebook/Mobile/Gmail
 // teeno login screens isi styling ko share karti hain.
@@ -58,37 +56,25 @@ fun LoginHeaderBar(title: String, headerColor: Color, onClose: () -> Unit) {
     }
 }
 
+// Yalla Ludo jaisa daba — gradient border (halka teal upar, gehra green nichay)
+// mint/white card ke charo taraf, jo kisi bhi content height par sahi rehta hai.
+val CardBorderGradient = Brush.verticalGradient(
+    listOf(Color(0xFF6EE7B7), Color(0xFF17A863), Color(0xFF0a7a42))
+)
+
 @Composable
 fun LoginCard(content: @Composable ColumnScope.() -> Unit) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardRealBg, RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-            .border(2.5.dp, CardRealBorder, RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-            .padding(16.dp),
-        content = content
-    )
-}
-
-// Yalla Ludo jaisa daba — bghome-1295ddb.png (gradient green frame) ko
-// card ke peeche background ke tor par stretch karta hai.
-private const val CARD_FRAME_BG = "file:///android_asset/img/bghome-1295ddb.png"
-
-@Composable
-fun ImageFramedLoginCard(content: @Composable ColumnScope.() -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        AsyncImage(
-            model = CARD_FRAME_BG,
-            contentDescription = null,
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier
-                .matchParentSize()
-                .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-        )
+            .background(CardBorderGradient, RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp))
+            .padding(3.dp)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .background(CardRealBg, RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                .padding(16.dp),
             content = content
         )
     }

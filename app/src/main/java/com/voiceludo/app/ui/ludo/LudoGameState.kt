@@ -189,6 +189,12 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
             val legalIdxs = legalRollsForToken(color, onlyIdx)
             val distinctValues = legalIdxs.map { savedRolls[it] }.distinct()
             if (distinctValues.size == 1) {
+                // Is waqt token ko movable list se hata do — warna player isi 350ms
+                // wait ke doraan bhi tap kar sakta hai (kyunke woh abhi glow kar raha
+                // hoga), jis se yehi move do martaba apply ho jata (ek tap se, ek is
+                // auto-apply se) aur savedRolls se dobara ek already-hata-hua index
+                // nikalne ki koshish crash (IndexOutOfBoundsException) deti thi.
+                movable.clear()
                 delay(350) // thora pause taake player dekh le ke kaunsa token chalne wala hai
                 applyRollToToken(onlyIdx, legalIdxs[0])
                 return
@@ -261,6 +267,15 @@ class LudoGameState(val mode: LudoMode, val players: List<LudoColor>, val magicO
     private suspend fun applyRollToToken(tokenIdx: Int, rollIdx: Int) {
         movable.clear()
         rollChoice.value = null
+        // Safety net: agar kisi wajah se yeh index ab savedRolls mein maujood nahi
+        // (jaisay koi doosra path pehle hi use kar chuka), crash hone ke bajaye
+        // chup chaap turn khatam kar do — game rukna nahi chahiye.
+        if (rollIdx !in savedRolls.indices) {
+            val giveExtra = chainCapture
+            chainCapture = false
+            advanceTurn(giveExtra)
+            return
+        }
         val dv = savedRolls[rollIdx]
         savedRolls.removeAt(rollIdx)
 

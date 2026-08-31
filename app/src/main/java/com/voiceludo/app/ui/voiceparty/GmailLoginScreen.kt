@@ -43,7 +43,7 @@ fun GmailLoginScreen(navController: NavController) {
         ) {
             LoginHeaderBar("Login", Color(0xFF0a7a42)) { navController.popBackStack() }
 
-            ImageFramedLoginCard {
+            LoginCard {
                 // Email field
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Box(
