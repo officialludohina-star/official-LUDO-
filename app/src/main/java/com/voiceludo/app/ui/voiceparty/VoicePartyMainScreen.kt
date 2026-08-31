@@ -22,6 +22,16 @@ private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81b
 private const val FB_ICON   = "https://i.postimg.cc/tR2tPz7G/bind-f-1c2b455.png"
 private const val GMAIL_ICON = "https://i.postimg.cc/63KLVjdr/bind-e-e8c989f.png"
 
+// Panel se test kiye gaye final numbers — ab permanent bake kar diye.
+private const val FB_WIDTH = 304
+private const val FB_HEIGHT = 64
+private const val FB_OFFSET_X = 0
+private const val FB_OFFSET_Y = 4
+private const val GMAIL_WIDTH = 316
+private const val GMAIL_HEIGHT = 68
+private const val GMAIL_OFFSET_X = 0
+private const val GMAIL_OFFSET_Y = 0
+
 @Composable
 fun VoicePartyMainScreen(navController: NavController) {
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0a1f15))) {
@@ -46,13 +56,21 @@ fun VoicePartyMainScreen(navController: NavController) {
             BigIconLoginButton(
                 iconUrl = FB_ICON,
                 label = "Login with Facebook",
-                onClick = { navController.navigate("vp_facebook_login") }
+                onClick = { navController.navigate("vp_facebook_login") },
+                width = FB_WIDTH,
+                height = FB_HEIGHT,
+                offsetX = FB_OFFSET_X,
+                offsetY = FB_OFFSET_Y
             )
             // Gmail signup button
             BigIconLoginButton(
                 iconUrl = GMAIL_ICON,
                 label = "Login with Gmail",
-                onClick = { navController.navigate("vp_gmail_login") }
+                onClick = { navController.navigate("vp_gmail_login") },
+                width = GMAIL_WIDTH,
+                height = GMAIL_HEIGHT,
+                offsetX = GMAIL_OFFSET_X,
+                offsetY = GMAIL_OFFSET_Y
             )
         }
     }
@@ -62,13 +80,18 @@ fun VoicePartyMainScreen(navController: NavController) {
 private fun BigIconLoginButton(
     iconUrl: String,
     label: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    width: Int,
+    height: Int,
+    offsetX: Int,
+    offsetY: Int
 ) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp)
+            .width(width.dp)
+            .height(height.dp)
+            .offset(x = offsetX.dp, y = offsetY.dp)
             .clip(RoundedCornerShape(50))
             .clickable(onClick = onClick)
     ) {

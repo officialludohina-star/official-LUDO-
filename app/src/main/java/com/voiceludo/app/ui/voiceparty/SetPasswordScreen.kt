@@ -1,10 +1,13 @@
 package com.voiceludo.app.ui.voiceparty
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,10 +17,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+
+// Same jungle/moon background jo baaki saari screens (Login, Sign Up, Home) mein use hoti hai
+private const val JUNGLE_MOON_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
 
 // Asal HTML ke "setPass" screen jaisa hi — naya password set karke account create karta
 // hai (yahan local, on-device AccountStore mein — dekho AccountStore.kt ke comments).
@@ -25,13 +33,13 @@ import androidx.navigation.NavController
 fun SetPasswordScreen(navController: NavController, method: String, contact: String) {
     val context = LocalContext.current
     var newPass by remember { mutableStateOf("") }
-    var confirmPass by remember { mutableStateOf("") }
+    var passVisible by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf("") }
     var createdId by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
-            model = "file:///android_asset/img/jungle_bg.jpg",
+            model = JUNGLE_MOON_BG,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -42,7 +50,12 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {
-            LoginHeaderBar("Set Password", Color(0xFF0a7a42)) { navController.popBackStack() }
+            // Reference jaisa hi teal gradient header, back-arrow ke saath
+            LoginHeaderBar(
+                "Set Password",
+                headerColor = Color(0xFF2ea87f),
+                useBackArrow = true
+            ) { navController.popBackStack() }
 
             LoginCard {
                 if (createdId != null) {
@@ -68,9 +81,38 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
                         modifier = Modifier.fillMaxWidth().height(46.dp)
                     ) { Text("Login karein", color = Color.White, fontWeight = FontWeight.Bold) }
                 } else {
-                    RealInput(newPass, { newPass = it; errorText = "" }, "Enter new password", isPassword = true)
-                    Spacer(Modifier.height(12.dp))
-                    RealInput(confirmPass, { confirmPass = it; errorText = "" }, "Confirm password", isPassword = true)
+                    // Reference jaisa ek hi "New Password" field, eye-toggle ke saath
+                    OutlinedTextField(
+                        value = newPass,
+                        onValueChange = { newPass = it; errorText = "" },
+                        placeholder = { Text("New Password", color = Color(0xFF9aa89e)) },
+                        singleLine = true,
+                        visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            EyeToggleIcon(
+                                visible = passVisible,
+                                modifier = Modifier
+                                    .padding(end = 10.dp)
+                                    .clickable { passVisible = !passVisible }
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = Color(0xFFc8e6c9),
+                            unfocusedBorderColor = Color(0xFFc8e6c9)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        "Tip: Enter a combination of at least 8 characters with numbers, letters, and special characters. Password with numbers only is not allowed.",
+                        color = Color(0xFF0a7a42), fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     if (errorText.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
@@ -83,19 +125,26 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
                     Spacer(Modifier.height(20.dp))
                     Button(
                         onClick = {
+                            val hasLetter = newPass.any { it.isLetter() }
+                            val hasNumber = newPass.any { it.isDigit() }
+                            val hasSpecial = newPass.any { !it.isLetterOrDigit() }
                             when {
-                                newPass != confirmPass -> errorText = "Password match nahi ho raha"
-                                newPass.length < 4 -> errorText = "Password kam se kam 4 characters ka ho"
+                                newPass.length < 8 ->
+                                    errorText = "Password kam se kam 8 characters ka ho."
+                                !hasLetter || !hasNumber || !hasSpecial ->
+                                    errorText = "Letters, numbers aur ek special character shamil karo."
                                 else -> {
                                     val account = AccountStore.createAccount(context, method, contact, newPass)
                                     createdId = account.idNumber
                                 }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0a7a42)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFbdbdbd)
+                        ),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(46.dp)
-                    ) { Text("Set Password", color = Color.White, fontWeight = FontWeight.Bold) }
+                        modifier = Modifier.fillMaxWidth().height(50.dp)
+                    ) { Text("Confirm", color = Color(0xFF3a3a3a), fontWeight = FontWeight.Bold, fontSize = 16.sp) }
                 }
             }
         }

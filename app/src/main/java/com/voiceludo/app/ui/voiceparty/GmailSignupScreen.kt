@@ -23,26 +23,21 @@ private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA001
 private const val OBTAIN_BUTTON = "https://i.postimg.cc/dtgJcnTx/IMG-20260831-WA0016.jpg"
 private const val CONFIRM_BUTTON = "https://i.postimg.cc/zf7mvk3P/IMG-20260831-WA0017.jpg"
 
-// ===== SIZE / POSITION KNOBS — number badal kar chota/bara aur upar/nichay/left/right karo =====
-// Email icon (Email likha hua graphic)
-private val EMAIL_ICON_WIDTH = 112     // chota bara (dp) — 1 to 200
-private val EMAIL_ICON_HEIGHT = 56     // chota bara (dp) — 1 to 200
-private val EMAIL_ICON_OFFSET_X = 0    // left(-) / right(+) — -100 to 100
-private val EMAIL_ICON_OFFSET_Y = 0    // upar(-) / nichay(+) — -100 to 100
-// "Enter email address" wala box
-private val EMAIL_INPUT_HEIGHT = 56    // chota bara (dp) — 1 to 200
-private val EMAIL_INPUT_OFFSET_X = 0   // left(-) / right(+) — -100 to 100
-private val EMAIL_INPUT_OFFSET_Y = 0   // upar(-) / nichay(+) — -100 to 100
-// Obtain button
-private val OBTAIN_BTN_WIDTH = 104     // chota bara (dp) — 1 to 200
-private val OBTAIN_BTN_HEIGHT = 52     // chota bara (dp) — 1 to 200
-private val OBTAIN_BTN_OFFSET_X = 0    // left(-) / right(+) — -100 to 100
-private val OBTAIN_BTN_OFFSET_Y = 0    // upar(-) / nichay(+) — -100 to 100
-// Confirm button (poori width use karta hai, isliye sirf height + position)
-private val CONFIRM_BTN_HEIGHT = 54    // chota bara (dp) — 1 to 200
-private val CONFIRM_BTN_OFFSET_X = 0   // left(-) / right(+) — -100 to 100
-private val CONFIRM_BTN_OFFSET_Y = 0   // upar(-) / nichay(+) — -100 to 100
-// ================================================================================================
+// Panel se test kiye gaye final numbers — ab permanent bake kar diye.
+private const val EMAIL_ICON_WIDTH = 80
+private const val EMAIL_ICON_HEIGHT = 48
+private const val EMAIL_ICON_OFFSET_X = -8
+private const val EMAIL_ICON_OFFSET_Y = 0
+private const val EMAIL_INPUT_HEIGHT = 56
+private const val EMAIL_INPUT_OFFSET_X = -8
+private const val EMAIL_INPUT_OFFSET_Y = 0
+private const val OBTAIN_BTN_WIDTH = 84
+private const val OBTAIN_BTN_HEIGHT = 44
+private const val OBTAIN_BTN_OFFSET_X = 0
+private const val OBTAIN_BTN_OFFSET_Y = 0
+private const val CONFIRM_BTN_HEIGHT = 58
+private const val CONFIRM_BTN_OFFSET_X = -4
+private const val CONFIRM_BTN_OFFSET_Y = -4
 
 @Composable
 fun GmailSignupScreen(navController: NavController) {
