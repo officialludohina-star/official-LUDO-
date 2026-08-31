@@ -45,28 +45,21 @@ import java.io.File
 // ============================================================================
 
 private const val DEFAULT_AVATAR = "file:///android_asset/img/user-icon.png"
-private const val UPLOAD_PHOTO_ICON = "https://i.postimg.cc/vZfM6Lf9/IMG-20260831-WA0011.jpg"
+private const val UPLOAD_PHOTO_ICON = "https://i.postimg.cc/PrbZKVL7/IMG-20260831-WA0011.jpg"
+private const val FEMALE_ICON = "https://i.postimg.cc/SKgfdTvw/female.webp"
+private const val MALE_ICON = "https://i.postimg.cc/65CVg5SN/male.webp"
 
-// Male/Female icon ab local hain (koi remote URL nahi) — pehle female.webp jaisa
-// remote link kabhi load hi nahi hota tha, isliye gender row mein icon ghayab
-// dikhta tha. Ab hamesha reliably dikhta hai, network ki zaroorat nahi.
+// Gender icon ab image se load hoti hai (female.webp / male.webp) — pehle
+// Unicode ♀/♂ symbol draw hota tha, ab asal icon dikhta hai.
 @Composable
 private fun GenderIcon(gender: String, size: androidx.compose.ui.unit.Dp) {
     val isFemale = gender == "female"
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(if (isFemale) Color(0xFFff4fa3) else Color(0xFF3d8bff)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            if (isFemale) "\u2640" else "\u2642",
-            color = Color.White,
-            fontWeight = FontWeight.Black,
-            fontSize = (size.value * 0.6f).sp
-        )
-    }
+    AsyncImage(
+        model = if (isFemale) FEMALE_ICON else MALE_ICON,
+        contentDescription = gender,
+        modifier = Modifier.size(size).clip(CircleShape),
+        contentScale = ContentScale.Crop
+    )
 }
 
 // COUNTRY_LIST (CountryList.kt) already "🇵🇰 +92 Pakistan" jaisi 195 entries rakhti
@@ -151,9 +144,13 @@ fun ProfileEditScreen(navController: NavController) {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                // ---- Avatar + upload badge — koi "Choose avatar" popup nahi, badge
-                // par tap karte hi seedha gallery/photo-picker khul jata hai. ----
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // ---- Avatar + alag se upload button (avatar ke right side wali
+                // jagah, red-box wali position) — tap karte hi gallery khul jati hai. ----
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     val avatarModel = when {
                         profile.avatarUri.isEmpty() -> DEFAULT_AVATAR
                         profile.avatarUri.startsWith("http") -> profile.avatarUri
@@ -176,16 +173,16 @@ fun ProfileEditScreen(navController: NavController) {
                             contentScale = if (profile.avatarUri.isEmpty()) ContentScale.Fit else ContentScale.Crop
                         )
                     }
-                    // Upload badge — dp ke sath bilkul juda hua, bottom-right corner,
-                    // sirf ek button, tap karte hi gallery open ho jati hai.
+
+                    Spacer(Modifier.width(16.dp))
+
+                    // Upload button — avatar ke bagal mein, tap karte hi gallery/photo-picker khul jati hai.
                     Box(
                         modifier = Modifier
-                            .align(Alignment.Center)
-                            .offset(x = 34.dp, y = 34.dp)
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(ProfileGreenAccent)
-                            .border(2.dp, Color.White, CircleShape)
+                            .size(width = 84.dp, height = 60.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White)
+                            .border(2.dp, ProfileGreenAccent, RoundedCornerShape(10.dp))
                             .clickable {
                                 pickPhoto.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -196,7 +193,7 @@ fun ProfileEditScreen(navController: NavController) {
                         AsyncImage(
                             model = UPLOAD_PHOTO_ICON,
                             contentDescription = "upload photo",
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(34.dp)
                         )
                     }
                 }
