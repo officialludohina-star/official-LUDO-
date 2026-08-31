@@ -29,12 +29,18 @@ val CardRealBg = Color(0xFFf5fff7)
 val CardRealBorder = Color(0xFF0a7a42)
 
 @Composable
-fun LoginHeaderBar(title: String, headerColor: Color, onClose: () -> Unit) {
+fun LoginHeaderBar(
+    title: String,
+    headerColor: Color,
+    padding: Int = 12,      // bar ke andar ka gap (dp) — 1-200
+    titleSize: Int = 16,    // title text ka size (sp) — 1-200
+    onClose: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(headerColor)
-            .padding(12.dp),
+            .padding(padding.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -43,7 +49,7 @@ fun LoginHeaderBar(title: String, headerColor: Color, onClose: () -> Unit) {
             title,
             color = Color.White,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 16.sp,
+            fontSize = titleSize.sp,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center
         )

@@ -1,9 +1,7 @@
 package com.voiceludo.app.ui.voiceparty
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -22,7 +20,17 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
 private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
-private const val EMAIL_ICON = "https://i.postimg.cc/GhVRgSb8/IMG-20260831-WA0012.jpg"
+
+// ===== SIZE KNOBS — yahan number badal kar size/position adjust karo (1-200 range) =====
+// Email icon badge (green box, Sign Up jaisa) ka size
+private val EMAIL_ICON_BOX_SIZE = 40   // pura box kitna bara (dp)
+private val EMAIL_ICON_TEXT_SIZE = 16  // andar wale ✉️ symbol ka size (sp)
+// Green "Login" header bar ki height/padding
+private val HEADER_PADDING = 12        // header bar ke andar ka gap (dp)
+private val HEADER_TITLE_SIZE = 16     // "Login" text ka size (sp)
+// Login button ka size
+private val LOGIN_BTN_HEIGHT = 46      // button ki height (dp)
+// =======================================================================================
 
 @Composable
 fun GmailLoginScreen(navController: NavController) {
@@ -45,27 +53,21 @@ fun GmailLoginScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {
-            // Green "Login" header bar hata diya — sirf ek chhota close (X) button,
-            // koi green background nahi, seedha jungle background par float karta hai.
-            Box(modifier = Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.CenterEnd) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .clickable { navController.popBackStack() },
-                    contentAlignment = Alignment.Center
-                ) { Text("\u2715", color = Color.White) }
-            }
+            // Sign Up jaisa hi green "Login" header bar — same panel dono screens par.
+            LoginHeaderBar("Login", Color(0xFF0a7a42), HEADER_PADDING, HEADER_TITLE_SIZE) { navController.popBackStack() }
 
-            LoginCard(showTopBorder = false) {
-                // Email field — icon ab apne asal size mein, bina green badge ke.
+            LoginCard {
+                // Email field — Sign Up jaisa hi green icon badge.
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    AsyncImage(
-                        model = EMAIL_ICON,
-                        contentDescription = "Email",
-                        modifier = Modifier.size(40.dp).padding(end = 8.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(EMAIL_ICON_BOX_SIZE.dp)
+                            .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
+                            .background(Color(0xFF0a7a42)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("\u2709\uFE0F", color = Color.White, fontWeight = FontWeight.Bold, fontSize = EMAIL_ICON_TEXT_SIZE.sp)
+                    }
                     RealInput(
                         email, { email = it; errorText = "" }, "Enter email address",
                         modifier = Modifier.weight(1f)
@@ -120,7 +122,7 @@ fun GmailLoginScreen(navController: NavController) {
                         disabledContainerColor = Color(0xFFbdbdbd)
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().height(46.dp)
+                    modifier = Modifier.fillMaxWidth().height(LOGIN_BTN_HEIGHT.dp)
                 ) {
                     Text("Login", color = Color.White, fontWeight = FontWeight.Bold)
                 }
