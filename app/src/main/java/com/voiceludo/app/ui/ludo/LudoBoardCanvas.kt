@@ -479,14 +479,16 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
         }
 
         // ---- Capture flash overlays ----
-        // Jab koi token kill kare: horse-chat icon (attacker ke upar) 2 sec
-        // Jab token kill ho kar ghar jaye: img8-static icon (usi cell par) 2 sec
-        val horseIcon = "https://i.postimg.cc/T335q8LT/horse-chat.webp"
-        val homeIcon  = "https://i.postimg.cc/vZTDxWkg/img8-static.png"
+        // Jab koi token kill kare: happy icon attacker (killer) ke upar 2 sec
+        // Jab token kill ho kar ghar jaye: rota hua icon usi cell par 2 sec
+        // NOTE: pehle yeh ulta tha (crying killer par, happy killed par) — user
+        // ke bataye anusar theek kiya gaya hai.
+        val happyIcon = "https://i.postimg.cc/vZTDxWkg/img8-static.png"
+        val cryingIcon = "https://i.postimg.cc/T335q8LT/horse-chat.webp"
 
         listOf(
-            state.killerFlashPos.value to horseIcon,
-            state.killedFlashPos.value to homeIcon
+            state.killerFlashPos.value to happyIcon,
+            state.killedFlashPos.value to cryingIcon
         ).forEach { (globalPos, iconUrl) ->
             if (globalPos != null && globalPos in RING.indices) {
                 val rc = RING[globalPos]
