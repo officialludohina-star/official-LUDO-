@@ -17,9 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 
 // index.html ke .card-real / .input-real / header-bar patterns — Facebook/Mobile/Gmail
 // teeno login screens isi styling ko share karti hain.
@@ -66,6 +68,30 @@ fun LoginCard(content: @Composable ColumnScope.() -> Unit) {
             .padding(16.dp),
         content = content
     )
+}
+
+// Yalla Ludo jaisa daba — bghome-1295ddb.png (gradient green frame) ko
+// card ke peeche background ke tor par stretch karta hai.
+private const val CARD_FRAME_BG = "file:///android_asset/img/bghome-1295ddb.png"
+
+@Composable
+fun ImageFramedLoginCard(content: @Composable ColumnScope.() -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        AsyncImage(
+            model = CARD_FRAME_BG,
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            content = content
+        )
+    }
 }
 
 @Composable

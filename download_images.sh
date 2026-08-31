@@ -61,4 +61,5 @@ curl -sL --retry 3 -o "$OUT/rank-no-1.webp" "https://i.postimg.cc/wvvWDTBV/rank-
 curl -sL --retry 3 -o "$OUT/system.webp" "https://i.postimg.cc/y60TSpCD/system.webp"
 curl -sL --retry 3 -o "$OUT/dice-roll-animation.gif" "https://i.postimg.cc/zv44tgMF/dice-roll-animation.gif"
 curl -sL --retry 3 -o "$OUT/IMG-20260825-WA0006.jpg" "https://i.postimg.cc/Z5wBdpqw/IMG-20260825-WA0006.jpg"
+curl -sL --retry 3 -o "$OUT/bghome-1295ddb.png" "https://i.postimg.cc/fLBZ82gp/bghome-1295ddb.png"
 echo "Sab $(ls "$OUT" | wc -l) images download ho gayi hain assets/img/ mein."
