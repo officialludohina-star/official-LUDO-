@@ -17,6 +17,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.voiceludo.app.net.EmailService
 
 private const val SIGNUP_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
 private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA0012.jpg"
@@ -49,6 +50,7 @@ fun GmailSignupScreen(navController: NavController) {
     var lastOtp by remember { mutableStateOf<String?>(null) }
     var secondsLeft by remember { mutableStateOf(0) }
     var errorText by remember { mutableStateOf("") }
+    var sendingEmail by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
@@ -103,12 +105,23 @@ fun GmailSignupScreen(navController: NavController) {
                             onClick = {
                                 if (email.isBlank()) {
                                     errorText = "Please enter your email address."
-                                } else {
-                                    lastOtp = AccountStore.generateOtp()
-                                    otpSent = true
-                                    secondsLeft = 60
-                                    scope.launch {
-                                        while (secondsLeft > 0) { delay(1000); secondsLeft-- }
+                                } else if (!sendingEmail) {
+                                    sendingEmail = true
+                                    errorText = ""
+                                    val otp = AccountStore.generateOtp()
+                                    // Asal index.html ke email.js scene jaisa hi — yeh OTP
+                                    // seedha user ke Gmail par bhejta hai (EmailJS REST API se).
+                                    EmailService.sendOtp(email, otp) { success ->
+                                        sendingEmail = false
+                                        lastOtp = otp
+                                        otpSent = true
+                                        secondsLeft = 60
+                                        if (!success) {
+                                            errorText = "Email bhejne mein masla hua — 1234 se try karein."
+                                        }
+                                        scope.launch {
+                                            while (secondsLeft > 0) { delay(1000); secondsLeft-- }
+                                        }
                                     }
                                 }
                             },
@@ -132,12 +145,14 @@ fun GmailSignupScreen(navController: NavController) {
                 if (otpSent) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "A verification code has been sent. Enter it above.",
+                        "Verification code $email par email kar diya gaya hai.",
                         color = Color(0xFF0a7a42), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                         modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )
+                    // Fallback: agar kisi wajah se (internet/spam-filter) email na pahunche,
+                    // 1234 hamesha bhi kaam kar jata hai — asal index.html jaisa hi safety net.
                     Text(
-                        "Test code: ${lastOtp ?: "1234"} (or use 1234)",
+                        "Email na aaye to 1234 use kar sakte hain.",
                         color = Color(0xFF6b8f7a), fontSize = 10.sp,
                         modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )

@@ -1,0 +1,307 @@
+package com.voiceludo.app.net
+
+import android.util.Log
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
+
+// ============================================================================
+// Asal bekend (README.md ke mutabiq): "signup, login, aur game sab kuch ek hi
+// WebSocket connection ke andar hota hai". Yeh client bhi bilkul waisa hi hai —
+// ek hi persistent /ws connection app ke poore session mein (login se le kar
+// game khatam hone tak) khula rehta hai. Koi bhi fake/local player/bot ab
+// istemal nahi hota — matchmaking, dice, moves sab is server se aate hain.
+// ============================================================================
+
+private const val WS_URL = "wss://voice-party-bekend-sarver-production.up.railway.app/ws"
+
+data class GameEvent(
+    val type: String,
+    val color: String? = null,
+    val value: Int = 0,
+    val tokenIndex: Int = 0,
+    val from: Int = 0,
+    val to: Int = 0,
+    val captured: List<String> = emptyList(),
+    val arrowJumped: Boolean = false,
+    val magicBonus: Boolean = false,
+    val reachedHome: Boolean = false,
+    val movable: List<Int> = emptyList(),
+    val winner: String? = null,
+    val finishOrder: List<String> = emptyList(),
+    val message: String? = null
+)
+
+data class GameSnapshot(
+    val mode: String,
+    val players: List<String>,
+    val tokens: Map<String, List<Int>>,
+    val currentColor: String,
+    val diceByColor: Map<String, Int>,
+    val savedRolls: List<Int>,
+    val movable: List<Int>,
+    val gameOver: Boolean,
+    val winner: String?,
+    val finishOrder: List<String>,
+    val rankBadge: Map<String, Int>,
+    val magicOn: Boolean,
+    val magicDiceCells: List<Int>,
+    val magicRocketCells: List<Int>
+)
+
+sealed class ServerMessage {
+    data class Auth(val playerId: String, val authToken: String, val coins: Long, val diamonds: Long) : ServerMessage()
+    data class Err(val message: String) : ServerMessage()
+    data class Waiting(val message: String) : ServerMessage()
+    data class Matched(
+        val roomId: String,
+        val color: String,
+        val players: List<String>,
+        val mode: String,
+        val bet: Int,
+        val coins: Long,
+        val state: GameSnapshot
+    ) : ServerMessage()
+    data class Events(val events: List<GameEvent>, val state: GameSnapshot) : ServerMessage()
+    data class Wallet(val color: String?, val coins: Long?, val diamonds: Long?, val message: String?) : ServerMessage()
+    data class OpponentLeft(val color: String) : ServerMessage()
+    object ConnectionOpened : ServerMessage()
+    data class ConnectionClosed(val reason: String) : ServerMessage()
+}
+
+typealias ServerListener = (ServerMessage) -> Unit
+
+object BackendClient {
+
+    private val client = OkHttpClient.Builder()
+        .pingInterval(20, TimeUnit.SECONDS)
+        .build()
+
+    private var socket: WebSocket? = null
+    private val listeners = CopyOnWriteArrayList<ServerListener>()
+    // Signup/login ke baad connect hone se pehle bheji gayi cheezein isi queue
+    // mein rehti hain, socket open hote hi flush ho jati hain.
+    private val pending = mutableListOf<JSONObject>()
+
+    // Session — jab tak app khuli hai / socket connected hai, yehi asal account hai.
+    var playerId: String? = null; private set
+    var authToken: String? = null; private set
+    var coins: Long = 0; private set
+    var diamonds: Long = 0; private set
+
+    // Matching screen match milte hi yahan store kar deti hai, Game screen isay
+    // consume kar leti hai — is se navigation route args mein room/color/state
+    // jaisi cheezein ghusane ki zaroorat nahi parti.
+    private var lastMatch: ServerMessage.Matched? = null
+    fun consumeLastMatch(): ServerMessage.Matched? {
+        val m = lastMatch
+        lastMatch = null
+        return m
+    }
+
+    fun addListener(l: ServerListener) { listeners.add(l) }
+    fun removeListener(l: ServerListener) { listeners.remove(l) }
+
+    private fun notify(msg: ServerMessage) {
+        listeners.forEach { it(msg) }
+    }
+
+    fun ensureConnected() {
+        if (socket != null) return
+        val request = Request.Builder().url(WS_URL).build()
+        socket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                synchronized(pending) {
+                    pending.forEach { webSocket.send(it.toString()) }
+                    pending.clear()
+                }
+                notify(ServerMessage.ConnectionOpened)
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                parse(text)?.let { notify(it) }
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                Log.e("BackendClient", "ws failure: ${t.message}")
+                socket = null
+                notify(ServerMessage.ConnectionClosed(t.message ?: "connection failed"))
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                socket = null
+                notify(ServerMessage.ConnectionClosed(reason))
+            }
+        })
+    }
+
+    private fun send(obj: JSONObject) {
+        ensureConnected()
+        val ws = socket
+        if (ws == null) {
+            synchronized(pending) { pending.add(obj) }
+        } else {
+            ws.send(obj.toString())
+        }
+    }
+
+    fun signup(email: String, password: String) {
+        send(JSONObject().put("type", "signup").put("email", email).put("password", password))
+    }
+
+    fun login(email: String, password: String) {
+        send(JSONObject().put("type", "login").put("email", email).put("password", password))
+    }
+
+    fun join(mode: String, bet: Int, players: Int, magic: Boolean) {
+        send(
+            JSONObject()
+                .put("type", "join")
+                .put("mode", mode)
+                .put("bet", bet)
+                .put("players", players)
+                .put("magic", magic)
+        )
+    }
+
+    fun roll() {
+        send(JSONObject().put("type", "roll"))
+    }
+
+    fun move(token: Int, value: Int = 0) {
+        send(JSONObject().put("type", "move").put("token", token).put("value", value))
+    }
+
+    fun buyExtraRoll() {
+        send(JSONObject().put("type", "buyExtraRoll"))
+    }
+
+    fun leaveRoom() {
+        send(JSONObject().put("type", "leave"))
+    }
+
+    private fun jsonArrayToIntList(a: JSONArray?): List<Int> {
+        if (a == null) return emptyList()
+        return (0 until a.length()).map { a.getInt(it) }
+    }
+
+    private fun jsonArrayToStringList(a: JSONArray?): List<String> {
+        if (a == null) return emptyList()
+        return (0 until a.length()).map { a.getString(it) }
+    }
+
+    private fun parseSnapshot(obj: JSONObject?): GameSnapshot? {
+        obj ?: return null
+        val tokensObj = obj.optJSONObject("tokens")
+        val tokens = mutableMapOf<String, List<Int>>()
+        tokensObj?.keys()?.forEach { k -> tokens[k] = jsonArrayToIntList(tokensObj.optJSONArray(k)) }
+        val diceObj = obj.optJSONObject("diceByColor")
+        val dice = mutableMapOf<String, Int>()
+        diceObj?.keys()?.forEach { k -> dice[k] = diceObj.optInt(k, 1) }
+        val rankObj = obj.optJSONObject("rankBadge")
+        val rank = mutableMapOf<String, Int>()
+        rankObj?.keys()?.forEach { k -> rank[k] = rankObj.optInt(k) }
+        val winner = obj.optString("winner")
+        return GameSnapshot(
+            mode = obj.optString("mode"),
+            players = jsonArrayToStringList(obj.optJSONArray("players")),
+            tokens = tokens,
+            currentColor = obj.optString("currentColor"),
+            diceByColor = dice,
+            savedRolls = jsonArrayToIntList(obj.optJSONArray("savedRolls")),
+            movable = jsonArrayToIntList(obj.optJSONArray("movable")),
+            gameOver = obj.optBoolean("gameOver"),
+            winner = winner.ifBlank { null },
+            finishOrder = jsonArrayToStringList(obj.optJSONArray("finishOrder")),
+            rankBadge = rank,
+            magicOn = obj.optBoolean("magicOn"),
+            magicDiceCells = jsonArrayToIntList(obj.optJSONArray("magicDiceCells")),
+            magicRocketCells = jsonArrayToIntList(obj.optJSONArray("magicRocketCells"))
+        )
+    }
+
+    private fun parseEvents(arr: JSONArray?): List<GameEvent> {
+        if (arr == null) return emptyList()
+        return (0 until arr.length()).map { i ->
+            val e = arr.getJSONObject(i)
+            val color = e.optString("color")
+            val winner = e.optString("winner")
+            val message = e.optString("message")
+            GameEvent(
+                type = e.optString("type"),
+                color = color.ifBlank { null },
+                value = e.optInt("value"),
+                tokenIndex = e.optInt("tokenIndex"),
+                from = e.optInt("from", -1),
+                to = e.optInt("to", -1),
+                captured = jsonArrayToStringList(e.optJSONArray("captured")),
+                arrowJumped = e.optBoolean("arrowJumped"),
+                magicBonus = e.optBoolean("magicBonus"),
+                reachedHome = e.optBoolean("reachedHome"),
+                movable = jsonArrayToIntList(e.optJSONArray("movable")),
+                winner = winner.ifBlank { null },
+                finishOrder = jsonArrayToStringList(e.optJSONArray("finishOrder")),
+                message = message.ifBlank { null }
+            )
+        }
+    }
+
+    private fun parse(text: String): ServerMessage? {
+        return try {
+            val obj = JSONObject(text)
+            when (obj.optString("type")) {
+                "auth" -> {
+                    playerId = obj.optString("player_id")
+                    authToken = obj.optString("auth_token")
+                    coins = obj.optLong("coins")
+                    diamonds = obj.optLong("diamonds")
+                    ServerMessage.Auth(playerId!!, authToken!!, coins, diamonds)
+                }
+                "error" -> ServerMessage.Err(obj.optString("message"))
+                "waiting" -> ServerMessage.Waiting(obj.optString("message"))
+                "matched" -> {
+                    if (obj.has("coins")) coins = obj.optLong("coins")
+                    val snap = parseSnapshot(obj.optJSONObject("state")) ?: return null
+                    val m = ServerMessage.Matched(
+                        roomId = obj.optString("room_id"),
+                        color = obj.optString("color"),
+                        players = jsonArrayToStringList(obj.optJSONArray("players")),
+                        mode = obj.optString("mode"),
+                        bet = obj.optInt("bet"),
+                        coins = coins,
+                        state = snap
+                    )
+                    lastMatch = m
+                    m
+                }
+                "events" -> {
+                    val snap = parseSnapshot(obj.optJSONObject("state")) ?: return null
+                    ServerMessage.Events(events = parseEvents(obj.optJSONArray("events")), state = snap)
+                }
+                "wallet" -> {
+                    if (obj.has("coins")) coins = obj.optLong("coins")
+                    if (obj.has("diamonds")) diamonds = obj.optLong("diamonds")
+                    val color = obj.optString("color")
+                    val message = obj.optString("message")
+                    ServerMessage.Wallet(
+                        color = color.ifBlank { null },
+                        coins = if (obj.has("coins")) obj.optLong("coins") else null,
+                        diamonds = if (obj.has("diamonds")) obj.optLong("diamonds") else null,
+                        message = message.ifBlank { null }
+                    )
+                }
+                "opponentLeft" -> ServerMessage.OpponentLeft(obj.optString("color"))
+                else -> null
+            }
+        } catch (e: Exception) {
+            Log.e("BackendClient", "parse error for '$text': ${e.message}")
+            null
+        }
+    }
+}

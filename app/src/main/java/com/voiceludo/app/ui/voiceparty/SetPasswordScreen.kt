@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -23,12 +24,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.voiceludo.app.net.BackendClient
+import com.voiceludo.app.net.ServerMessage
 
 // Same jungle/moon background jo baaki saari screens (Login, Sign Up, Home) mein use hoti hai
 private const val JUNGLE_MOON_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
 
-// Asal HTML ke "setPass" screen jaisa hi — naya password set karke account create karta
-// hai (yahan local, on-device AccountStore mein — dekho AccountStore.kt ke comments).
+// Asal HTML ke "setPass" screen jaisa hi — naya password set karke account banata hai.
+// method=="gmail" ho to ab REAL bekend (BackendClient.signup) par account banta hai —
+// koi fake local account nahi. Password par pehle jo sakht rule tha (8 chars + letter +
+// number + special-char zaroori) woh hata diya gaya — jo bhi password lagao who chal
+// jayega (bekend khud sirf itna check karta hai ke kam se kam 6 characters ho).
 @Composable
 fun SetPasswordScreen(navController: NavController, method: String, contact: String) {
     val context = LocalContext.current
@@ -36,6 +42,27 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
     var passVisible by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf("") }
     var createdId by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    // Sirf gmail method ke waqt hi bekend se signup call ka jawab sunna hai
+    DisposableEffect(Unit) {
+        val listener: (ServerMessage) -> Unit = { msg ->
+            when (msg) {
+                is ServerMessage.Auth -> {
+                    loading = false
+                    AccountStore.saveSession(context, "gmail", contact)
+                    createdId = msg.playerId
+                }
+                is ServerMessage.Err -> {
+                    loading = false
+                    errorText = msg.message
+                }
+                else -> {}
+            }
+        }
+        BackendClient.addListener(listener)
+        onDispose { BackendClient.removeListener(listener) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
@@ -108,7 +135,7 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
 
                     Spacer(Modifier.height(14.dp))
                     Text(
-                        "Tip: Enter a combination of at least 8 characters with numbers, letters, and special characters. Password with numbers only is not allowed.",
+                        "Koi bhi password lagayen (kam se kam 6 characters).",
                         color = Color(0xFF0a7a42), fontWeight = FontWeight.Bold, fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -125,26 +152,36 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
                     Spacer(Modifier.height(20.dp))
                     Button(
                         onClick = {
-                            val hasLetter = newPass.any { it.isLetter() }
-                            val hasNumber = newPass.any { it.isDigit() }
-                            val hasSpecial = newPass.any { !it.isLetterOrDigit() }
                             when {
-                                newPass.length < 8 ->
-                                    errorText = "Password kam se kam 8 characters ka ho."
-                                !hasLetter || !hasNumber || !hasSpecial ->
-                                    errorText = "Letters, numbers aur ek special character shamil karo."
+                                newPass.length < 6 ->
+                                    errorText = "Password kam se kam 6 characters ka ho."
+                                method == "gmail" -> {
+                                    loading = true
+                                    errorText = ""
+                                    BackendClient.signup(contact, newPass)
+                                }
                                 else -> {
+                                    // Mobile/Facebook abhi bekend par nahi hain (bekend sirf
+                                    // email/password accounts sambhalta hai) — is liye woh
+                                    // filhal on-device account ki tarah hi chalte hain.
                                     val account = AccountStore.createAccount(context, method, contact, newPass)
                                     createdId = account.idNumber
                                 }
                             }
                         },
+                        enabled = !loading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFbdbdbd)
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
-                    ) { Text("Confirm", color = Color(0xFF3a3a3a), fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                    ) {
+                        if (loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color(0xFF3a3a3a), strokeWidth = 2.dp)
+                        } else {
+                            Text("Confirm", color = Color(0xFF3a3a3a), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                    }
                 }
             }
         }

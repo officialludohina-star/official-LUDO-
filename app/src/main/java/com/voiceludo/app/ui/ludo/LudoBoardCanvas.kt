@@ -414,7 +414,7 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                 val targetY = centerY - tokenSizeDp / 2
 
                 val isMovable = t.color == state.currentColor &&
-                    state.currentIdx.value == 0 &&
+                    state.currentColor == state.myColor &&
                     !state.isMoving.value &&
                     t.idx in state.movable
 
@@ -456,7 +456,7 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                 val targetY = centerY - tokenSizeDp / 2
 
                 val isMovable = color == state.currentColor &&
-                    state.currentIdx.value == 0 &&
+                    state.currentColor == state.myColor &&
                     !state.isMoving.value &&
                     i in state.movable
 

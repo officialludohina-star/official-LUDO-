@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.voiceludo.app.net.BackendClient
+import com.voiceludo.app.net.ServerMessage
 
 private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
 private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA0012.jpg"
@@ -31,12 +34,35 @@ private const val EMAIL_INPUT_HEIGHT = 56
 private const val EMAIL_INPUT_OFFSET_X = 0
 private const val EMAIL_INPUT_OFFSET_Y = 0
 
+// Ab REAL bekend (BackendClient.login) se login hota hai — koi local/fake
+// account-check nahi. Bekend ka apna account (email + bcrypt password) hi
+// asal source-of-truth hai, jo signup ke waqt SetPasswordScreen se bana tha.
 @Composable
 fun GmailLoginScreen(navController: NavController) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val listener: (ServerMessage) -> Unit = { msg ->
+            when (msg) {
+                is ServerMessage.Auth -> {
+                    loading = false
+                    AccountStore.saveSession(context, "gmail", email)
+                    navController.navigate("vp_home")
+                }
+                is ServerMessage.Err -> {
+                    loading = false
+                    errorText = msg.message
+                }
+                else -> {}
+            }
+        }
+        BackendClient.addListener(listener)
+        onDispose { BackendClient.removeListener(listener) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
@@ -93,7 +119,7 @@ fun GmailLoginScreen(navController: NavController) {
 
                 Spacer(Modifier.height(16.dp))
 
-                val loginEnabled = pass.isNotBlank()
+                val loginEnabled = pass.isNotBlank() && !loading
                 if (loginEnabled) {
                     RemoteImageButton(
                         imageUrl = LOGIN_BUTTON,
@@ -102,15 +128,10 @@ fun GmailLoginScreen(navController: NavController) {
                             when {
                                 email.isBlank() || pass.isBlank() ->
                                     errorText = "Please enter your email and password."
-                                else -> when (val result = AccountStore.login(context, "gmail", email, pass)) {
-                                    is AccountStore.LoginResult.Success -> {
-                                        AccountStore.saveSession(context, "gmail", email)
-                                        navController.navigate("vp_home")
-                                    }
-                                    AccountStore.LoginResult.NoAccount ->
-                                        errorText = "No account found with this email. Please sign up first."
-                                    AccountStore.LoginResult.WrongPassword ->
-                                        errorText = "Incorrect password. Please try again."
+                                else -> {
+                                    loading = true
+                                    errorText = ""
+                                    BackendClient.login(email, pass)
                                 }
                             }
                         },
@@ -123,7 +144,13 @@ fun GmailLoginScreen(navController: NavController) {
                         colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFFbdbdbd)),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(54.dp)
-                    ) { Text("Login", color = Color.White, fontWeight = FontWeight.Bold) }
+                    ) {
+                        if (loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Text("Login", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
 
                 LinkRow(

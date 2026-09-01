@@ -32,7 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import kotlinx.coroutines.launch
+import com.voiceludo.app.net.BackendClient
+import com.voiceludo.app.net.ServerMessage
 import kotlin.math.roundToInt
 
 // Asal HTML ke #ludoGameScreen jaisa hi — sab kuch (top icons, settings panel, board,
@@ -44,14 +45,42 @@ private enum class CornerPos { POS_TL, POS_TR, POS_BL, POS_BR }
 @Composable
 fun LudoGameScreen(navController: NavController, mode: String, players: Int, magic: Boolean = false, betIndex: Int = 0) {
     val ludoMode = LudoMode.valueOf(mode)
-    val colorList = if (players == 4) PLAYER_COLORS_4P else PLAYER_COLORS_2P
-    val state = remember { LudoGameState(ludoMode, colorList, magic) }
-    val bet = BET_OPTIONS.getOrElse(betIndex) { BET_OPTIONS.first() }
-    val totalPool = bet * players
 
-    // Bot turns ab alag se manage nahi karne parte — state.rollDice()/advanceTurn khud
-    // hi (asal HTML ke maybeBotTurn jaisa) bot ki agli roll/chain automatically chala
-    // dete hain, chahe extra-turn (capture/6) kitni hi baar mile.
+    // Asal match-info (mera color, real room, initial server state) — Matching
+    // screen ne yeh BackendClient mein rakha tha jab "matched" message aaya tha.
+    // Agar kisi wajah se yeh missing ho (jaisay process restart), wapis mode-select
+    // par chale jate hain — game bina real room ke shuru nahi ho sakta.
+    val matched = remember { BackendClient.consumeLastMatch() }
+    if (matched == null) {
+        LaunchedEffect(Unit) { navController.popBackStack() }
+        return
+    }
+
+    val colorList = remember(matched) { matched.players.map { LudoColor.valueOf(it) } }
+    val myColor = remember(matched) { LudoColor.valueOf(matched.color) }
+    val state = remember(matched) {
+        LudoGameState(ludoMode, colorList, magic, myColor).apply { applyInitialSnapshot(matched.state) }
+    }
+    val totalPool = matched.bet * players
+
+    // Server se aane wale "events"/"opponentLeft" is room ke liye yahan process hote
+    // hain, aur screen se nikalte hi room chhod diya jata hai (koi fake bot ab
+    // takeover nahi karta jaisa pehle local sim mein hota tha).
+    var opponentLeftMsg by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(matched) {
+        val listener: (ServerMessage) -> Unit = { msg ->
+            when (msg) {
+                is ServerMessage.Events -> state.onServerEvents(msg.events, msg.state)
+                is ServerMessage.OpponentLeft -> opponentLeftMsg = "${msg.color} game chhod gaya"
+                else -> {}
+            }
+        }
+        BackendClient.addListener(listener)
+        onDispose {
+            BackendClient.removeListener(listener)
+            BackendClient.leaveRoom()
+        }
+    }
 
     var showSettings by remember { mutableStateOf(false) }
     var showBetInfo by remember { mutableStateOf(false) }
@@ -81,11 +110,10 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 
         // .game-board-wrap: position:absolute; top:50%; left:50%; translate(-50%,-50%);
         // width:100vw; height:auto (square board image)
-        val boardScope = rememberCoroutineScope()
         Box(modifier = Modifier.align(Alignment.Center).fillMaxWidth().aspectRatio(1f)) {
             LudoBoardCanvas(state) { _, idx ->
-                if (state.currentIdx.value == 0 && !state.isMoving.value) {
-                    boardScope.launch { state.tapToken(idx) }
+                if (state.currentColor == state.myColor && !state.isMoving.value) {
+                    state.tapToken(idx)
                 }
             }
         }
@@ -170,8 +198,8 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 
         colorList.forEachIndexed { i, color ->
             val pos = positions[i]
-            val isSelf = i == 0
-            val name = if (isSelf) "Player" else "Player ${i + 1}"
+            val isSelf = color == state.myColor
+            val name = if (isSelf) "Aap" else "Player ${i + 1}"
 
             val spec = when (pos) {
                 CornerPos.POS_BL -> PosSpec(1f, 79f, -8f, -10f, false)
@@ -196,7 +224,6 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                     PlayerProfileBox(name = name, color = color, rank = state.rankBadge[color])
                 }
                 val dice = @Composable {
-                    val scope = rememberCoroutineScope()
                     // Sirf jis player ki abhi bari hai uska hi dice-box dikhta hai —
                     // baaki sab players ka dice box gayab rehta hai jab tak unki apni
                     // bari na aa jaye (tab woh khud-b-khud reveal ho jata hai). Isi
