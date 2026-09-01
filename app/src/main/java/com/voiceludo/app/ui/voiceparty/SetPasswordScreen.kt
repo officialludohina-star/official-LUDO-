@@ -57,6 +57,12 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
                     loading = false
                     errorText = msg.message
                 }
+                is ServerMessage.ConnectionClosed -> {
+                    if (loading) {
+                        loading = false
+                        errorText = "Server se connect nahi ho saka: ${msg.reason}"
+                    }
+                }
                 else -> {}
             }
         }

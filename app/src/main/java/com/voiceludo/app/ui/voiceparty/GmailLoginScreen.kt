@@ -57,6 +57,16 @@ fun GmailLoginScreen(navController: NavController) {
                     loading = false
                     errorText = msg.message
                 }
+                is ServerMessage.ConnectionClosed -> {
+                    // Pehle yahan kuch nahi hota tha — agar WebSocket connect hi na ho pae
+                    // (server down/unreachable), loading hamesha ke liye ghoomta rehta tha
+                    // aur koi error kabhi nazar nahi aata tha. Ab connection fail hone par
+                    // seedha error dikha dete hain.
+                    if (loading) {
+                        loading = false
+                        errorText = "Server se connect nahi ho saka: ${msg.reason}"
+                    }
+                }
                 else -> {}
             }
         }

@@ -2,6 +2,7 @@ package com.voiceludo.app.net
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -59,11 +60,19 @@ object EmailService {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                Log.e("EmailService", "sendOtp network failure: ${e.message}")
                 mainHandler.post { onResult(false) }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val ok = response.isSuccessful
+                if (!ok) {
+                    // EmailJS ka asal error message (jaisay "API calls are disabled for
+                    // non-browser applications") yahan Logcat mein dikhega — tag "EmailService"
+                    // se filter kar ke dekhein.
+                    val errBody = response.body?.string()
+                    Log.e("EmailService", "sendOtp failed: HTTP ${response.code} — $errBody")
+                }
                 response.close()
                 mainHandler.post { onResult(ok) }
             }

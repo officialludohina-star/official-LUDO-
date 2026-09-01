@@ -35,6 +35,7 @@ import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 // Asal HTML ke #ludoGameScreen jaisa hi — sab kuch (top icons, settings panel, board,
 // har player ka profile+dice) HTML ke % left/top/right values ke mutabiq bilkul
@@ -100,6 +101,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenW = maxWidth
         val screenH = maxHeight
+        val scope = rememberCoroutineScope()
 
         AsyncImage(
             model = GAME_BG_IMG,
@@ -334,12 +336,12 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 text = {
                     Column {
                         Text(
-                            "Aap ne is game mein $bet coins laga kar khela hai.",
+                            "Aap ne is game mein ${matched.bet} coins laga kar khela hai.",
                             fontWeight = FontWeight.Bold, fontSize = 14.sp
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Entry Coins: $bet",
+                            "Entry Coins: ${matched.bet}",
                             color = Color(0xFF0a7a42), fontWeight = FontWeight.Black, fontSize = 14.sp
                         )
                         Text(
