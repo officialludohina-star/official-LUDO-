@@ -11,6 +11,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.voiceludo.app.net.BackendClient
+import com.voiceludo.app.net.ServerMessage
 
 // Asal HTML (#yallaHome) ka poora lobby screen — topbar (avatar/coins/gems/shop/settings),
 // league-rank locked cards, mode grid (2&4 Players / Team), bottom nav (Events/Battle/Chat/Social).
@@ -66,6 +69,17 @@ private fun Modifier.homeLayout(key: String): Modifier {
     return this
         .offset(x = a.x.dp, y = a.y.dp)
         .graphicsLayer(scaleX = a.size / 100f, scaleY = a.size / 100f)
+}
+
+// Coins/diamonds ab bekend se aate hain (signup/login ke "auth" jawab se, aur
+// jeetne/extra-roll khareedne par "wallet" event se). Pehle yeh pill hamesha
+// hardcoded "10K" dikhata tha — asal balance se koi lena dena nahi tha. Ab
+// BackendClient ki live value use karte hain aur "10,450" jaisa pura number
+// dikhate hain (bade numbers par hi "12.4K" jaisi short form).
+private fun formatAmount(v: Long): String = when {
+    v >= 1_000_000 -> String.format("%.1fM", v / 1_000_000.0)
+    v >= 100_000 -> String.format("%.1fK", v / 1_000.0)
+    else -> "%,d".format(v)
 }
 
 
@@ -163,6 +177,28 @@ private fun TopBar(onAvatarClick: () -> Unit, onSettingsClick: () -> Unit = {}) 
     // Home ka avatar hamesha profile screen mein save ki hui photo dikhata hai
     // (HTML ke #homeAvatarImg jaisa) — agar kuch save nahi hui to default icon.
     val savedAvatar = ProfileStore.get(context).avatarUri
+
+    // Live coins/diamonds — BackendClient mein already login/signup ke waqt aa
+    // chuke hote hain (yahan screen khulte hi unki current value le lete hain),
+    // phir "wallet" event (jeetne par ya extra-roll khareedne par) aane par yeh
+    // state khud update ho jata hai — koi manual refresh ki zaroorat nahi.
+    var coins by remember { mutableStateOf(BackendClient.coins) }
+    var diamonds by remember { mutableStateOf(BackendClient.diamonds) }
+    DisposableEffect(Unit) {
+        val listener: (ServerMessage) -> Unit = { msg ->
+            when (msg) {
+                is ServerMessage.Auth -> { coins = msg.coins; diamonds = msg.diamonds }
+                is ServerMessage.Wallet -> {
+                    msg.coins?.let { coins = it }
+                    msg.diamonds?.let { diamonds = it }
+                }
+                is ServerMessage.Matched -> coins = msg.coins
+                else -> {}
+            }
+        }
+        BackendClient.addListener(listener)
+        onDispose { BackendClient.removeListener(listener) }
+    }
     val avatarModel: Any = when {
         savedAvatar.isEmpty() -> "file:///android_asset/img/user-icon.png"
         savedAvatar.startsWith("http") -> savedAvatar
@@ -196,7 +232,7 @@ private fun TopBar(onAvatarClick: () -> Unit, onSettingsClick: () -> Unit = {}) 
         Box(modifier = Modifier.homeLayout("coinPill")) {
             Pill(
                 iconUrl = "file:///android_asset/img/coin-icon.webp",
-                value = "10K",
+                value = formatAmount(coins),
                 valueColor = Color(0xFFffd700),
                 addBg = Color(0xFF22c55e),
                 addContent = { Text("+", color = Color(0xFF3a2500), fontWeight = FontWeight.Black, fontSize = 13.sp) }
@@ -208,7 +244,7 @@ private fun TopBar(onAvatarClick: () -> Unit, onSettingsClick: () -> Unit = {}) 
         Box(modifier = Modifier.homeLayout("gemPill")) {
             Pill(
                 iconUrl = "file:///android_asset/img/diamond.png",
-                value = "10K",
+                value = formatAmount(diamonds),
                 valueColor = Color(0xFF00e5ff),
                 addBg = Color.Transparent,
                 addContent = {
