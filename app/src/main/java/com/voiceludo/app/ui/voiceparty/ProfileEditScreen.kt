@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.voiceludo.app.net.BackendClient
 import java.io.File
 
 // ============================================================================
@@ -86,23 +87,53 @@ fun ProfileEditScreen(navController: NavController) {
     var showBioDialog by remember { mutableStateOf(false) }
     var showGenderDialog by remember { mutableStateOf(false) }
     var showFlagDialog by remember { mutableStateOf(false) }
+    var avatarUploading by remember { mutableStateOf(false) }
+    var avatarError by remember { mutableStateOf<String?>(null) }
+
+    // Naam/avatar badalte hi bekend (real account, game-partners ko dikhne wala)
+    // ko bhi sync kar dete hain — kabhi bhi local file path avatar ke taur par
+    // nahi bhejte, sirf pehle se hosted http(s) URL (upload hone ke baad).
+    fun pushProfileToBackend(currentProfile: UserProfile) {
+        val avatarForBackend = currentProfile.avatarUri.takeIf { it.startsWith("http") } ?: ""
+        BackendClient.updateProfile(currentProfile.name, avatarForBackend)
+    }
 
     // Device ki photo picker (Android system picker — koi runtime permission nahi
-    // chahiye). Photo internal storage mein copy kar dete hain taake app restart
-    // ke baad bhi dikhti rahe (HTML wale base64-persist wale idea jaisa hi).
+    // chahiye). Photo pehle internal storage mein copy karte hain (turant preview
+    // ke liye), phir usay bekend ke POST /avatar par upload karte hain — response
+    // mein mila hosted URL hi asal avatarUri ban jata hai (README ke mutabiq
+    // base64/local path kabhi bhi bekend/doosre players ko nahi bheja jata).
     val pickPhoto = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
             try {
-                val outFile = File(context.filesDir, "profile_avatar.jpg")
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    outFile.outputStream().use { output -> input.copyTo(output) }
+                val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (bytes == null) {
+                    avatarError = "Photo padhi nahi ja saki"
+                    return@rememberLauncherForActivityResult
                 }
+                // Turant local preview (upload complete hone tak)
+                val outFile = File(context.filesDir, "profile_avatar.jpg")
+                outFile.writeBytes(bytes)
                 profile = profile.copy(avatarUri = outFile.absolutePath)
-                ProfileStore.saveAvatar(context, outFile.absolutePath)
+                avatarError = null
+                avatarUploading = true
+                BackendClient.uploadAvatar(bytes, mime) { url, err ->
+                    avatarUploading = false
+                    if (url != null) {
+                        ProfileStore.saveAvatar(context, url)
+                        profile = profile.copy(avatarUri = url)
+                        pushProfileToBackend(profile)
+                    } else {
+                        // Upload fail — local preview hi reh jati hai is device par,
+                        // lekin doosre players ko nahi dikhegi jab tak dobara try na ho.
+                        avatarError = err ?: "Photo upload nahi ho saki, dobara koshish karein"
+                    }
+                }
             } catch (_: Exception) {
-                // Photo copy fail hui to chup chaap ignore — avatar purana hi rahega
+                avatarError = "Photo save nahi ho saki"
             }
         }
     }
@@ -198,6 +229,27 @@ fun ProfileEditScreen(navController: NavController) {
                     }
                 }
 
+                if (avatarUploading) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Photo upload ho rahi hai...",
+                        color = ProfileGreenDark,
+                        fontSize = 11.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+                avatarError?.let { err ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        err,
+                        color = Color(0xFFB33123),
+                        fontSize = 11.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+
                 Spacer(Modifier.height(20.dp))
 
                 // ---- Name ----
@@ -281,6 +333,7 @@ fun ProfileEditScreen(navController: NavController) {
             onConfirm = { t ->
                 ProfileStore.saveName(context, t)
                 profile = ProfileStore.get(context)
+                pushProfileToBackend(profile)
                 showNameDialog = false
             }
         )

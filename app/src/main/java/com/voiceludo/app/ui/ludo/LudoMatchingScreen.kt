@@ -80,12 +80,20 @@ fun LudoMatchingScreen(
             modifier = Modifier.fillMaxSize().padding(top = 34.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Matching/searching gif — jab tak asal opponent bekend se nahi mil jata
+            // (ServerMessage.Matched aane tak) yeh chalti rehti hai.
+            AsyncImage(
+                model = MATCHING_SEARCH_GIF,
+                contentDescription = "searching",
+                modifier = Modifier.size(90.dp)
+            )
+            Spacer(Modifier.height(10.dp))
             Text(
                 waitingText,
                 color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(30.dp))
 
             // Entry coins + total pool
             Row(

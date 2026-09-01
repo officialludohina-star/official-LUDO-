@@ -3,13 +3,16 @@ package com.voiceludo.app.net
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 
@@ -22,6 +25,15 @@ import java.util.concurrent.TimeUnit
 // ============================================================================
 
 private const val WS_URL = "wss://voice-party-bekend-sarver-production.up.railway.app/ws"
+// Avatar upload REST endpoint isi bekend host par hai, sirf wss:// ki jagah
+// https:// aur path /avatar (WS_URL se hi derive kar lete hain taake host
+// do jagah maintain na karna pare).
+private val HTTP_BASE = WS_URL.removeSuffix("/ws").replaceFirst("wss://", "https://").replaceFirst("ws://", "http://")
+
+// Bekend ke "profiles" map / "opponentProfile" event / "auth" response mein aane
+// wala har player ka naam + avatar (avatar hamesha ek hosted URL hoti hai, kabhi
+// base64 nahi — README ke mutabiq).
+data class Profile(val name: String, val avatar: String)
 
 data class GameEvent(
     val type: String,
@@ -54,11 +66,22 @@ data class GameSnapshot(
     val rankBadge: Map<String, Int>,
     val magicOn: Boolean,
     val magicDiceCells: List<Int>,
-    val magicRocketCells: List<Int>
+    val magicRocketCells: List<Int>,
+    // Har color ke liye agli extra-roll ki diamond-cost (2,4,8,10,16,24, phir har
+    // baar double) — 0 ka matlab hai us player ke liye is game mein 1000-diamond
+    // cap tak pahunch kar lock ho chuka.
+    val extraRollNextCost: Map<String, Long>
 )
 
 sealed class ServerMessage {
-    data class Auth(val playerId: String, val authToken: String, val coins: Long, val diamonds: Long) : ServerMessage()
+    data class Auth(
+        val playerId: String,
+        val authToken: String,
+        val coins: Long,
+        val diamonds: Long,
+        val name: String,
+        val avatar: String
+    ) : ServerMessage()
     data class Err(val message: String) : ServerMessage()
     data class Waiting(val message: String) : ServerMessage()
     data class Matched(
@@ -68,11 +91,23 @@ sealed class ServerMessage {
         val mode: String,
         val bet: Int,
         val coins: Long,
-        val state: GameSnapshot
+        val state: GameSnapshot,
+        // color -> {name, avatar} har player ka, is se opponent ki profile
+        // (naam + DP) game screen par dikhai ja sakti hai.
+        val profiles: Map<String, Profile>
     ) : ServerMessage()
     data class Events(val events: List<GameEvent>, val state: GameSnapshot) : ServerMessage()
     data class Wallet(val color: String?, val coins: Long?, val diamonds: Long?, val message: String?) : ServerMessage()
     data class OpponentLeft(val color: String) : ServerMessage()
+    // Kisi opponent ne mid-game apna naam/avatar badla (updateProfile bheja) —
+    // isay real-time update karne ke liye.
+    data class OpponentProfile(val color: String, val name: String, val avatar: String) : ServerMessage()
+    // Har turn (roll ya pending-move) shuru hote hi bekend yeh bhejta hai — us
+    // player ki profile par 12-second countdown ring dikhane ke liye.
+    data class TurnTimer(val color: String, val seconds: Int) : ServerMessage()
+    // Yeh account kisi doosre phone/device par login/signup hua — bekend ne is
+    // (purane) connection ko turant band kar diya hai, 1 ID = 1 device rule ke tehat.
+    data class ForceLogout(val message: String) : ServerMessage()
     object ConnectionOpened : ServerMessage()
     data class ConnectionClosed(val reason: String) : ServerMessage()
 }
@@ -96,6 +131,10 @@ object BackendClient {
     var authToken: String? = null; private set
     var coins: Long = 0; private set
     var diamonds: Long = 0; private set
+    // Server-truth apna naam/avatar (auth response se, aur updateProfile bheje
+    // jaane ke baad hum khud optimistically yahan update kar dete hain).
+    var myName: String = ""; private set
+    var myAvatar: String = ""; private set
 
     // Matching screen match milte hi yahan store kar deti hai, Game screen isay
     // consume kar leti hai — is se navigation route args mein room/color/state
@@ -201,6 +240,51 @@ object BackendClient {
         send(JSONObject().put("type", "leave"))
     }
 
+    // Naam/avatar badalne ke liye — avatar hamesha pehle uploadAvatar() se mile
+    // hosted URL ke sath bhejna hai, kabhi bhi local file path/base64 nahi.
+    // Optimistically apni local copy (myName/myAvatar) bhi turant update kar
+    // dete hain, taake apni hi screen par turant naya naam/photo dikhe.
+    fun updateProfile(name: String, avatar: String) {
+        myName = name
+        myAvatar = avatar
+        send(JSONObject().put("type", "updateProfile").put("name", name).put("avatar", avatar))
+    }
+
+    // Profile photo upload — README ke mutabiq POST /avatar?token=<auth_token>,
+    // body = raw image bytes, Content-Type: image/jpeg|png|webp, max 3MB.
+    // Response: {"url": "https://.../avatars/xxx.jpg"} — yehi URL phir
+    // updateProfile() mein bheja jata hai. Kabhi bhi base64/data-URI nahi bhejte.
+    // Callback hamesha main thread par aata hai.
+    fun uploadAvatar(bytes: ByteArray, mimeType: String, onResult: (url: String?, error: String?) -> Unit) {
+        val token = authToken
+        if (token == null) {
+            mainHandler.post { onResult(null, "login zaroori hai") }
+            return
+        }
+        val url = "$HTTP_BASE/avatar?token=$token"
+        val body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+        val request = Request.Builder().url(url).post(body).header("Content-Type", mimeType).build()
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                mainHandler.post { onResult(null, e.message ?: "upload fail ho gaya") }
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: Response) {
+                response.use { resp ->
+                    val text = resp.body?.string()
+                    if (!resp.isSuccessful || text == null) {
+                        mainHandler.post { onResult(null, text ?: "upload fail ho gaya (${resp.code})") }
+                        return
+                    }
+                    val resultUrl = try { JSONObject(text).optString("url").ifBlank { null } } catch (e: Exception) { null }
+                    mainHandler.post {
+                        if (resultUrl != null) onResult(resultUrl, null) else onResult(null, "invalid response")
+                    }
+                }
+            }
+        })
+    }
+
     private fun jsonArrayToIntList(a: JSONArray?): List<Int> {
         if (a == null) return emptyList()
         return (0 until a.length()).map { a.getInt(it) }
@@ -222,6 +306,9 @@ object BackendClient {
         val rankObj = obj.optJSONObject("rankBadge")
         val rank = mutableMapOf<String, Int>()
         rankObj?.keys()?.forEach { k -> rank[k] = rankObj.optInt(k) }
+        val extraCostObj = obj.optJSONObject("extraRollNextCost")
+        val extraCost = mutableMapOf<String, Long>()
+        extraCostObj?.keys()?.forEach { k -> extraCost[k] = extraCostObj.optLong(k) }
         val winner = obj.optString("winner")
         return GameSnapshot(
             mode = obj.optString("mode"),
@@ -237,8 +324,19 @@ object BackendClient {
             rankBadge = rank,
             magicOn = obj.optBoolean("magicOn"),
             magicDiceCells = jsonArrayToIntList(obj.optJSONArray("magicDiceCells")),
-            magicRocketCells = jsonArrayToIntList(obj.optJSONArray("magicRocketCells"))
+            magicRocketCells = jsonArrayToIntList(obj.optJSONArray("magicRocketCells")),
+            extraRollNextCost = extraCost
         )
+    }
+
+    private fun parseProfiles(obj: JSONObject?): Map<String, Profile> {
+        if (obj == null) return emptyMap()
+        val out = mutableMapOf<String, Profile>()
+        obj.keys().forEach { color ->
+            val p = obj.optJSONObject(color) ?: return@forEach
+            out[color] = Profile(name = p.optString("name"), avatar = p.optString("avatar"))
+        }
+        return out
     }
 
     private fun parseEvents(arr: JSONArray?): List<GameEvent> {
@@ -276,7 +374,9 @@ object BackendClient {
                     authToken = obj.optString("auth_token")
                     coins = obj.optLong("coins")
                     diamonds = obj.optLong("diamonds")
-                    ServerMessage.Auth(playerId!!, authToken!!, coins, diamonds)
+                    myName = obj.optString("name")
+                    myAvatar = obj.optString("avatar")
+                    ServerMessage.Auth(playerId!!, authToken!!, coins, diamonds, myName, myAvatar)
                 }
                 "error" -> ServerMessage.Err(obj.optString("message"))
                 "waiting" -> ServerMessage.Waiting(obj.optString("message"))
@@ -290,7 +390,8 @@ object BackendClient {
                         mode = obj.optString("mode"),
                         bet = obj.optInt("bet"),
                         coins = coins,
-                        state = snap
+                        state = snap,
+                        profiles = parseProfiles(obj.optJSONObject("profiles"))
                     )
                     lastMatch = m
                     m
@@ -312,6 +413,20 @@ object BackendClient {
                     )
                 }
                 "opponentLeft" -> ServerMessage.OpponentLeft(obj.optString("color"))
+                "opponentProfile" -> ServerMessage.OpponentProfile(
+                    color = obj.optString("color"),
+                    name = obj.optString("name"),
+                    avatar = obj.optString("avatar")
+                )
+                "turnTimer" -> ServerMessage.TurnTimer(obj.optString("color"), obj.optInt("seconds", 12))
+                "forceLogout" -> {
+                    // Server ne yeh (purana) connection band kar diya — apni local
+                    // session state bhi turant clear kar dete hain taake app dobara
+                    // isi purani auth se kuch bhejne ki koshish na kare.
+                    playerId = null
+                    authToken = null
+                    ServerMessage.ForceLogout(obj.optString("message"))
+                }
                 else -> null
             }
         } catch (e: Exception) {

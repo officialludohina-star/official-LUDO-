@@ -113,6 +113,10 @@ val TOKEN_IMG: Map<LudoColor, String> = mapOf(
 // kabhi load hi nahi hoti thi — is se "roll hui ya nahi" pata nahi chalta tha.
 const val DICE_ROLL_GIF = "file:///android_asset/img/dice-roll-animation.gif"
 
+// Matching screen ("Opponents dhoonde ja rahe hain...") ke dauran chalne wali gif —
+// HINAX ka diya hua asal link.
+const val MATCHING_SEARCH_GIF = "https://i.postimg.cc/FK838KM0/match.gif"
+
 val DICE_FACE_IMG: Map<Int, String> = mapOf(
     1 to "file:///android_asset/img/1.png",
     2 to "file:///android_asset/img/2.png",

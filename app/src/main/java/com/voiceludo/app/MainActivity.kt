@@ -6,9 +6,19 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -32,6 +42,9 @@ import com.voiceludo.app.ui.voiceparty.GmailSignupScreen
 import com.voiceludo.app.ui.voiceparty.SetPasswordScreen
 import com.voiceludo.app.ui.voiceparty.YallaHomeScreen
 import com.voiceludo.app.ui.voiceparty.ProfileEditScreen
+import com.voiceludo.app.ui.voiceparty.AccountStore
+import com.voiceludo.app.net.BackendClient
+import com.voiceludo.app.net.ServerMessage
 
 // Poori app ka navigation graph — Voice Party (login/home) aur Ludo (mode-select/game)
 // dono yahan se navigate hote hain, sab kuch native Kotlin/Compose mein.
@@ -92,6 +105,38 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
+                    val context = LocalContext.current
+
+                    // 1 ID = 1 device — bekend ne yeh connection "forceLogout" kar diya
+                    // (matlab yehi account kisi doosre phone/device par login/signup ho
+                    // gaya hai). Yahan poori app ke liye ek hi global listener hai
+                    // (chahe user is waqt kisi bhi screen par ho), taake turant local
+                    // session clear ho kar login screen par wapis bheja ja sake.
+                    var forceLogoutMsg by remember { mutableStateOf<String?>(null) }
+                    DisposableEffect(Unit) {
+                        val listener: (ServerMessage) -> Unit = { msg ->
+                            if (msg is ServerMessage.ForceLogout) {
+                                forceLogoutMsg = msg.message.ifBlank { "Aapki ID kisi doosre phone/device par login ho gayi hai." }
+                            }
+                        }
+                        BackendClient.addListener(listener)
+                        onDispose { BackendClient.removeListener(listener) }
+                    }
+                    forceLogoutMsg?.let { msg ->
+                        AlertDialog(
+                            onDismissRequest = {},
+                            title = { Text("Logged Out", fontWeight = FontWeight.Black) },
+                            text = { Text(msg) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    AccountStore.clearSession(context)
+                                    forceLogoutMsg = null
+                                    navController.navigate("vp_main") { popUpTo(0) }
+                                }) { Text("OK") }
+                            }
+                        )
+                    }
+
                     NavHost(navController = navController, startDestination = "vp_main") {
                         composable("vp_main") { VoicePartyMainScreen(navController) }
                         composable("vp_mobile_login") { MobileLoginScreen(navController) }

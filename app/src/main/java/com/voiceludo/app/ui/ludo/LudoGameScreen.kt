@@ -1,10 +1,13 @@
 package com.voiceludo.app.ui.ludo
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +23,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -60,7 +65,10 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
     val colorList = remember(matched) { matched.players.map { LudoColor.valueOf(it) } }
     val myColor = remember(matched) { LudoColor.valueOf(matched.color) }
     val state = remember(matched) {
-        LudoGameState(ludoMode, colorList, magic, myColor).apply { applyInitialSnapshot(matched.state) }
+        LudoGameState(ludoMode, colorList, magic, myColor).apply {
+            applyInitialSnapshot(matched.state)
+            applyInitialProfiles(matched.profiles)
+        }
     }
     val totalPool = matched.bet * players
 
@@ -68,11 +76,17 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
     // hain, aur screen se nikalte hi room chhod diya jata hai (koi fake bot ab
     // takeover nahi karta jaisa pehle local sim mein hota tha).
     var opponentLeftMsg by remember { mutableStateOf<String?>(null) }
+    // "wallet" event ka message (jeetne par "pot credit ho gaya", extra-roll
+    // khareedne ki confirmation, waghera) — kuch second ke liye ek banner dikhata hai.
+    var walletMsg by remember { mutableStateOf<String?>(null) }
     DisposableEffect(matched) {
         val listener: (ServerMessage) -> Unit = { msg ->
             when (msg) {
                 is ServerMessage.Events -> state.onServerEvents(msg.events, msg.state)
                 is ServerMessage.OpponentLeft -> opponentLeftMsg = "${msg.color} game chhod gaya"
+                is ServerMessage.OpponentProfile -> state.onOpponentProfile(msg.color, msg.name, msg.avatar)
+                is ServerMessage.TurnTimer -> state.onTurnTimer(msg.color, msg.seconds)
+                is ServerMessage.Wallet -> msg.message?.let { walletMsg = it }
                 else -> {}
             }
         }
@@ -82,20 +96,37 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             BackendClient.leaveRoom()
         }
     }
+    // walletMsg kuch der dikha kar khud gayab ho jata hai (naya message aaye ya na aaye)
+    LaunchedEffect(walletMsg) {
+        if (walletMsg != null) {
+            kotlinx.coroutines.delay(3000)
+            walletMsg = null
+        }
+    }
 
     var showSettings by remember { mutableStateOf(false) }
     var showBetInfo by remember { mutableStateOf(false) }
     var soundOn by remember { mutableStateOf(true) }
 
-    // Asal HTML: window.COLOR_TO_POS — 4P mein har color apne board-quadrant ke
-    // corner par hi apna profile+dice dikhata hai; 2P mein self hamesha bottom-left,
-    // doosra player top-right (fixed positions)
-    val colorToPos = mapOf(
-        LudoColor.GREEN to CornerPos.POS_TL,
-        LudoColor.YELLOW to CornerPos.POS_TR,
-        LudoColor.BLUE to CornerPos.POS_BR,
-        LudoColor.RED to CornerPos.POS_BL
-    )
+    // BUG FIX: pehle board hamesha fixed rehta tha (GREEN=TL, YELLOW=TR, BLUE=BR,
+    // RED=BL) chahe "mera" color kuch bhi ho — isi wajah se ek phone par apna ghar
+    // neeche dikhta tha aur dusre phone par (jahan color alag tha) upar dikhta tha.
+    // Ab poora board + har player ka profile/dice-box itna rotate kar dete hain ke
+    // MERA color hamesha bottom-left (RED ki jagah) par aaye — jaisay asal Ludo apps
+    // mein hota hai (har player apna ghar hamesha neeche hi dekhta hai). Colors ka
+    // aapas ka clockwise order (Green->Yellow->Blue->Red->Green) bilkul wahi rehta
+    // hai, bas poora set ghoom jata hai.
+    val colorClockwise = listOf(LudoColor.GREEN, LudoColor.YELLOW, LudoColor.BLUE, LudoColor.RED)
+    val cornerClockwise = listOf(CornerPos.POS_TL, CornerPos.POS_TR, CornerPos.POS_BR, CornerPos.POS_BL)
+    val rotationSteps = remember(matched) {
+        val myIdx = colorClockwise.indexOf(myColor)
+        val redIdx = colorClockwise.indexOf(LudoColor.RED) // RED ki native jagah hi "bottom" hai
+        ((redIdx - myIdx) % 4 + 4) % 4
+    }
+    fun visualCornerFor(color: LudoColor): CornerPos {
+        val nativeIdx = colorClockwise.indexOf(color)
+        return cornerClockwise[(nativeIdx + rotationSteps) % 4]
+    }
 
     // #ludoGameScreen: position:fixed; inset:0; background game-bg.webp cover
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -112,7 +143,15 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 
         // .game-board-wrap: position:absolute; top:50%; left:50%; translate(-50%,-50%);
         // width:100vw; height:auto (square board image)
-        Box(modifier = Modifier.align(Alignment.Center).fillMaxWidth().aspectRatio(1f)) {
+        // rotationZ: poora board itna ghumaya jata hai ke MERA color hamesha bottom-left
+        // (neeche) par nazar aaye — chahe asal (server-truth) color kuch bhi ho.
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .graphicsLayer(rotationZ = rotationSteps * 90f)
+        ) {
             LudoBoardCanvas(state) { _, idx ->
                 if (state.currentColor == state.myColor && !state.isMoving.value) {
                     state.tapToken(idx)
@@ -191,17 +230,22 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
         }
 
         // .game-players-wrap: position:absolute; inset:0 — har player ka apna
-        // profile + dice box, HTML ke pos-tl/pos-tr/pos-bl/pos-br corners ke mutabiq
-        val positions: List<CornerPos> = if (players == 4) {
-            colorList.map { colorToPos.getValue(it) }
-        } else {
-            listOf(CornerPos.POS_BL, CornerPos.POS_TR)
-        }
+        // profile + dice box, ab bhi rotation-aware corner par (dekho upar
+        // visualCornerFor) — taake "mera" box board ke rotated ghar ke sath hi
+        // match kare, sirf 2 corners tak mehdood nahi (2P mein bhi rotation
+        // lagta hai taake dono phone consistent nazar aayein).
+        val positions: List<CornerPos> = colorList.map { visualCornerFor(it) }
 
         colorList.forEachIndexed { i, color ->
             val pos = positions[i]
             val isSelf = color == state.myColor
-            val name = if (isSelf) "Aap" else "Player ${i + 1}"
+            // Server se aaya asal naam/DP (matched.profiles / opponentProfile) —
+            // agar kisi wajah se abhi tak na aaya ho (naya opponent, race condition)
+            // to fallback "Aap"/"Player N" dikhata hai jaisa pehle tha.
+            val serverProfile = state.profiles[color]
+            val name = serverProfile?.name?.takeIf { it.isNotBlank() }
+                ?: if (isSelf) "Aap" else "Player ${i + 1}"
+            val avatarUrl = serverProfile?.avatar?.takeIf { it.isNotBlank() }
 
             val spec = when (pos) {
                 CornerPos.POS_BL -> PosSpec(1f, 79f, -8f, -10f, false)
@@ -223,7 +267,18 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val profile = @Composable {
-                    PlayerProfileBox(name = name, color = color, rank = state.rankBadge[color])
+                    PlayerProfileBox(
+                        name = name,
+                        avatarUrl = avatarUrl,
+                        color = color,
+                        rank = state.rankBadge[color],
+                        // Yeh player ki abhi 12-second turn timer chal rahi hai to
+                        // ring dikhao — game khatam hote hi (ya kisi aur ki timer
+                        // start hote hi) yeh apne aap gayab ho jati hai.
+                        showTimerRing = !state.gameOver.value && state.turnTimerColor.value == color,
+                        timerSeconds = state.turnTimerSeconds.value,
+                        timerKey = state.turnTimerKey.value
+                    )
                 }
                 val dice = @Composable {
                     // Sirf jis player ki abhi bari hai uska hi dice-box dikhta hai —
@@ -246,9 +301,16 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                                 diceValue = state.diceByColor[color] ?: 1,
                                 rolling = state.isRolling.value,
                                 isClickable = isSelf,
-                                // rollDice() khud rolling-animation, chain (6/capture/etc) sab
-                                // sambhalta hai — bas movable khali honi chahiye (koi move pending na ho)
-                                enabled = isSelf && !state.gameOver.value && state.currentIdx.value == 0 &&
+                                // BUG FIX: pehle yahan ek galat extra check tha
+                                // "state.currentIdx.value == 0" — jiski wajah se dice
+                                // SIRF us player ke liye clickable hota tha jiska
+                                // turn-order mein index 0 ho. Baaki colors (jaise
+                                // yellow, agar woh index 0 par na ho) ka dice hamesha
+                                // disabled reh jata tha — na tap hota tha, na token
+                                // move hoti thi. Yahan hum already color==currentColor
+                                // wale branch ke andar hain, to bas isSelf + normal
+                                // game-state checks hi kaafi hain.
+                                enabled = isSelf && !state.gameOver.value &&
                                     state.movable.isEmpty() && !state.isRolling.value && !state.isMoving.value,
                                 onClick = { scope.launch { state.rollDice() } }
                             )
@@ -270,6 +332,36 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                                         .padding(horizontal = 5.dp, vertical = 1.dp)
                                 )
                             }
+                            // Diamonds se extra dice-roll khareedne wala badge — sirf apni bari
+                            // mein, aur sirf jab tak is game mein is color ke liye lock (1000
+                            // diamond cap) nahi ho chuka (cost > 0). Cost badge par hi dikhta
+                            // hai (2, phir 4, 8, 16... — har purchase pichli se double).
+                            val extraCost = if (isSelf) state.extraRollNextCost[color] ?: 0L else 0L
+                            if (isSelf && extraCost > 0 && !state.gameOver.value && !state.isRolling.value && !state.isMoving.value) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .offset(y = 16.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xF2143c64))
+                                        .clickable { scope.launch { state.buyExtraRoll() } }
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = "file:///android_asset/img/diamond.png",
+                                        contentDescription = "extra roll",
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(Modifier.width(2.dp))
+                                    Text(
+                                        "$extraCost",
+                                        color = Color(0xFF6EC3FF),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -286,6 +378,24 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
         // par "Apki baari hai — dice roll karein" jaisa koi message nahi dikhta. Turn ka
         // pata ab sirf active player ke dice-box ke oopar wale green arrow (neeche) aur
         // token ke glow se chalta hai.
+
+        // "wallet" event ka message (jeetna/pot-credit/extra-roll confirmation) aur
+        // "opponent left" — dono ek chhota banner top-center par, kuch second ke liye.
+        (walletMsg ?: opponentLeftMsg)?.let { msg ->
+            Text(
+                msg,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 60.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xF2143c64))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            )
+        }
 
         // Asal HTML ke #rollChoicePopup jaisa — jab ek movable token ke liye ek se
         // zyada ALAG saved number (jaisay 6 aur 4 dono) legal hon, player yahan se
@@ -378,19 +488,54 @@ private fun SettingsOption(icon: String, label: String, onClick: () -> Unit) {
     }
 }
 
-// .game-info-box: width:66px — profile pic (44dp circle) + name label
+// .game-info-box: width:66px — profile pic (44dp circle) + name label. Naam/DP ab
+// server se aaye asal profile se aate hain (BackendClient ke "matched"/"opponentProfile"
+// se) — avatarUrl null ho to DEFAULT_AVATAR_IMG fallback hoti hai.
 @Composable
-private fun PlayerProfileBox(name: String, color: LudoColor, rank: Int?) {
+private fun PlayerProfileBox(
+    name: String,
+    avatarUrl: String?,
+    color: LudoColor,
+    rank: Int?,
+    showTimerRing: Boolean,
+    timerSeconds: Int,
+    timerKey: Int
+) {
     Column(
         modifier = Modifier.width(66.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box {
+            // 12-second countdown ring — bekend ke "turnTimer" event se shuru hoti
+            // hai; ring poori tarah khaali (0%) hone tak progress karti hai, taake
+            // player ko saaf pata chale ke kitna waqt bacha hai roll/move karne ke
+            // liye. timerKey badalte hi (naya turn/naya timer) animation fresh se
+            // shuru ho jati hai (key() wrapper isi ke liye hai).
+            if (showTimerRing) {
+                key(timerKey) {
+                    val progress = remember { Animatable(1f) }
+                    LaunchedEffect(timerKey) {
+                        progress.snapTo(1f)
+                        progress.animateTo(0f, animationSpec = tween(timerSeconds * 1000, easing = LinearEasing))
+                    }
+                    Canvas(modifier = Modifier.size(50.dp)) {
+                        val stroke = 3.dp.toPx()
+                        drawArc(
+                            color = Color(0xFF2ECC40),
+                            startAngle = -90f,
+                            sweepAngle = 360f * progress.value,
+                            useCenter = false,
+                            style = Stroke(width = stroke, cap = StrokeCap.Round)
+                        )
+                    }
+                }
+            }
             AsyncImage(
-                model = DEFAULT_AVATAR_IMG,
+                model = avatarUrl ?: DEFAULT_AVATAR_IMG,
                 contentDescription = name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
+                    .align(Alignment.Center)
                     .size(44.dp)
                     .clip(CircleShape)
                     .border(2.dp, Color.White, CircleShape)

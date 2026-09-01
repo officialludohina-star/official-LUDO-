@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.GameEvent
 import com.voiceludo.app.net.GameSnapshot
+import com.voiceludo.app.net.Profile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -69,6 +70,43 @@ class LudoGameState(
     val magicDiceCells = mutableStateListOf<Int>()
     val magicRocketCells = mutableStateListOf<Int>()
 
+    // Har color ke liye agli extra-roll ki diamond-cost — snapshot se sync hoti
+    // rehti hai (0 = us player ke liye is game mein lock ho chuka).
+    val extraRollNextCost = mutableStateMapOf<LudoColor, Long>()
+
+    // ---- Har player ka naam + DP — "matched" message ke profiles map se shuru hoti
+    // hai, aur "opponentProfile" event se real-time update hoti rehti hai (jab koi
+    // player mid-game apna naam/photo badle). ----
+    val profiles = mutableStateMapOf<LudoColor, Profile>()
+
+    fun applyInitialProfiles(map: Map<String, Profile>) {
+        map.forEach { (colorName, p) ->
+            runCatching { LudoColor.valueOf(colorName) }.getOrNull()?.let { profiles[it] = p }
+        }
+    }
+
+    fun onOpponentProfile(colorName: String, name: String, avatar: String) {
+        runCatching { LudoColor.valueOf(colorName) }.getOrNull()?.let { profiles[it] = Profile(name, avatar) }
+    }
+
+    // ---- Turn timer — bekend har turn (roll ya pending-move) shuru hote hi 12-second
+    // duration bhejta hai; yahan sirf us duration ko store karte hain, PlayerProfileBox
+    // isi se apna khud ka countdown-ring animation chalata hai (turnTimerKey badalte
+    // hi animation restart ho jati hai, taake har naye turn/timer par ring fresh se
+    // shuru ho). Agar 12 second tak player roll/move na kare, bekend khud uski taraf
+    // se action le leta hai — yahan sirf visual countdown hai, asal enforcement server
+    // par hai. ----
+    var turnTimerColor = mutableStateOf<LudoColor?>(null)
+    var turnTimerSeconds = mutableStateOf(12)
+    var turnTimerKey = mutableStateOf(0)
+
+    fun onTurnTimer(colorName: String, seconds: Int) {
+        val c = runCatching { LudoColor.valueOf(colorName) }.getOrNull() ?: return
+        turnTimerColor.value = c
+        turnTimerSeconds.value = seconds
+        turnTimerKey.value += 1
+    }
+
     // ---- Server se aane wale "events"/"matched" messages yahan process hote hain ----
 
     // Naya match milte hi (koi dice roll hone se pehle) initial state seedha, bina
@@ -117,6 +155,7 @@ class LudoGameState(
                 }
                 "gameOver" -> {
                     gameOver.value = true
+                    turnTimerColor.value = null
                     val winnerColor = e.winner?.let { runCatching { LudoColor.valueOf(it) }.getOrNull() }
                     winnerText.value = if (winnerColor != null) "$winnerColor JEET GAYA! \uD83C\uDFC6" else "Game khatam"
                 }
@@ -196,6 +235,18 @@ class LudoGameState(
 
         magicDiceCells.clear(); magicDiceCells.addAll(snap.magicDiceCells)
         magicRocketCells.clear(); magicRocketCells.addAll(snap.magicRocketCells)
+
+        extraRollNextCost.clear()
+        snap.extraRollNextCost.forEach { (k, v) ->
+            runCatching { LudoColor.valueOf(k) }.getOrNull()?.let { extraRollNextCost[it] = v }
+        }
+    }
+
+    // ---- UI se call hota hai jab self diamonds se ek extra dice-roll khareedna
+    // chahe (sirf current-turn player hi bhej sakta hai, cost server khud nikalta hai) ----
+    fun buyExtraRoll() {
+        if (gameOver.value || currentColor != myColor) return
+        BackendClient.buyExtraRoll()
     }
 
     // ---- UI se call hone wale actions — sab kuch seedha bekend ko bhej dete hain ----

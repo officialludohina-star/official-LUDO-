@@ -86,6 +86,19 @@ private fun formatAmount(v: Long): String = when {
 @Composable
 fun YallaHomeScreen(navController: NavController) {
     var showSettingsDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Home khulte hi apna on-device saved naam/avatar (agar avatar pehle se
+    // upload ho kar hosted URL ban chuka ho) ek dafa bekend ko sync kar dete
+    // hain — taake agla match milte hi opponent ko sahi naam/DP dikhe, chahe
+    // profile pichli baar app khuli thi tab edit hui ho.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (BackendClient.playerId != null) {
+            val p = ProfileStore.get(context)
+            val avatarForBackend = p.avatarUri.takeIf { it.startsWith("http") } ?: ""
+            BackendClient.updateProfile(p.name, avatarForBackend)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF051a0f))) {
         AsyncImage(
