@@ -66,7 +66,11 @@ fun GmailLoginScreen(navController: NavController) {
 
     DisposableEffect(Unit) {
         val listener: (ServerMessage) -> Unit = { msg ->
-            debugText = "Debug: server se mila -> ${msg::class.simpleName}"
+            debugText = if (msg is ServerMessage.ConnectionClosed) {
+                "Debug: connection closed -> reason: '${msg.reason}'"
+            } else {
+                "Debug: server se mila -> ${msg::class.simpleName}"
+            }
             when (msg) {
                 is ServerMessage.Auth -> {
                     loading = false

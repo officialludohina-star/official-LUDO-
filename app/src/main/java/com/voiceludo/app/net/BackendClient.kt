@@ -1,5 +1,7 @@
 package com.voiceludo.app.net
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -108,8 +110,21 @@ object BackendClient {
     fun addListener(l: ServerListener) { listeners.add(l) }
     fun removeListener(l: ServerListener) { listeners.remove(l) }
 
+    // OkHttp ke WebSocketListener callbacks (onOpen/onMessage/onClosed/onFailure)
+    // hamesha OkHttp ke apne background thread par chalte hain, UI/main thread
+    // par nahi. Agar listeners (jaise GmailLoginScreen) yahan se seedha Compose
+    // state badalne ya navController.navigate() call karne ki koshish karte, to
+    // "must be called on main thread" exception aata — jo OkHttp turant
+    // connection failure samajh kar socket band kar deta ("ConnectionClosed"
+    // dikhta, chahe server ne bilkul sahi jawab diya ho). Ab yahan hi ek dafa
+    // main thread par switch kar dete hain, taake sab listeners hamesha safe
+    // rahen aur unhe khud is baat ka khayal na rakhna pade.
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     private fun notify(msg: ServerMessage) {
-        listeners.forEach { it(msg) }
+        mainHandler.post {
+            listeners.forEach { it(msg) }
+        }
     }
 
     fun ensureConnected() {
