@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -20,6 +21,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -137,6 +140,15 @@ fun RealInput(
         placeholder = { Text(placeholder, color = Color(0xFF9aa89e)) },
         singleLine = true,
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        // Password field ke liye keyboardType=Password set karna zaroori hai —
+        // warna kuch keyboards masked text par bhi autocorrect/auto-capitalize
+        // laga dete hain jo silently password ghalat kar deta hai (dikhta nahi
+        // kyunki text dots ke peeche chupa hota hai).
+        keyboardOptions = if (isPassword) {
+            KeyboardOptions(keyboardType = KeyboardType.Password, capitalization = KeyboardCapitalization.None)
+        } else {
+            KeyboardOptions(capitalization = KeyboardCapitalization.None)
+        },
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = Color.White,

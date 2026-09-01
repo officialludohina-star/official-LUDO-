@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+import kotlinx.coroutines.delay
 
 private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
 private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA0012.jpg"
@@ -37,16 +38,35 @@ private const val EMAIL_INPUT_OFFSET_Y = 0
 // Ab REAL bekend (BackendClient.login) se login hota hai — koi local/fake
 // account-check nahi. Bekend ka apna account (email + bcrypt password) hi
 // asal source-of-truth hai, jo signup ke waqt SetPasswordScreen se bana tha.
+//
+// DEBUG BUILD: 10-second timeout add kiya hai (server se koi response na aaye
+// to loading hamesha ke liye ghoomta nahi rahega) aur ek chhota neela debug
+// text bhi dikhta hai jisse pata chalta hai server se asal mein kya mila —
+// isse "stuck ho jata hai" wali problem diagnose karna aasan ho jayega.
 @Composable
 fun GmailLoginScreen(navController: NavController) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf("") }
+    var debugText by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
+
+    // Agar loading 10 second se zyada chale (slow network / server down) to
+    // khud hi timeout error dikha do — hamesha ghoomta hua spinner nahi rehna chahiye.
+    LaunchedEffect(loading) {
+        if (loading) {
+            delay(10000)
+            if (loading) {
+                loading = false
+                errorText = "Timeout: 10 second mein server se koi response nahi aaya. Network check karein."
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         val listener: (ServerMessage) -> Unit = { msg ->
+            debugText = "Debug: server se mila -> ${msg::class.simpleName}"
             when (msg) {
                 is ServerMessage.Auth -> {
                     loading = false
@@ -55,7 +75,7 @@ fun GmailLoginScreen(navController: NavController) {
                 }
                 is ServerMessage.Err -> {
                     loading = false
-                    errorText = msg.message
+                    errorText = if (msg.message.isNotBlank()) msg.message else "Server ne error bheja (khali message)"
                 }
                 is ServerMessage.ConnectionClosed -> {
                     // Pehle yahan kuch nahi hota tha — agar WebSocket connect hi na ho pae
@@ -127,6 +147,14 @@ fun GmailLoginScreen(navController: NavController) {
                     )
                 }
 
+                if (debugText.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        debugText, color = Color(0xFF1565C0), fontSize = 10.sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 Spacer(Modifier.height(16.dp))
 
                 val loginEnabled = pass.isNotBlank() && !loading
@@ -141,6 +169,7 @@ fun GmailLoginScreen(navController: NavController) {
                                 else -> {
                                     loading = true
                                     errorText = ""
+                                    debugText = "Debug: connecting..."
                                     BackendClient.login(email, pass)
                                 }
                             }
