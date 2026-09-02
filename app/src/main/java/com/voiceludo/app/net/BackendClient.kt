@@ -239,6 +239,15 @@ object BackendClient {
         send(JSONObject().put("type", "login").put("email", email).put("password", password))
     }
 
+    // Forgot Password — email par pehle app khud (EmailService) OTP bhej kar
+    // verify kar chuki hoti hai, phir yeh call bekend par us email ke account
+    // ka naya password set kar deta hai. Jawab "auth" hi aata hai (naya
+    // session token + coins/diamonds ke sath) — matlab reset hote hi user
+    // turant logged-in bhi ho jata hai, dobara login karne ki zaroorat nahi.
+    fun resetPassword(email: String, newPassword: String) {
+        send(JSONObject().put("type", "resetPassword").put("email", email).put("password", newPassword))
+    }
+
     fun join(mode: String, bet: Int, players: Int, magic: Boolean) {
         send(
             JSONObject()

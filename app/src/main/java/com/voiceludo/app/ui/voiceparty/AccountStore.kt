@@ -113,17 +113,18 @@ object AccountStore {
         }
     }
 
-    // Asal HTML jaisa hi OTP — is device par hi memory mein rakhte hain (koi real
-    // email/SMS backend na hone ki wajah se). "1234" hamesha bhi chalta hai, HTML ke
-    // fallback jaisa (taake testing mein OTP ka wait na karna pare).
-    private var currentOtp: String = "1234"
+    // Real OTP — EmailService.sendOtp() se generate ho kar user ke asal Gmail par
+    // jata hai (koi fake/bypass code nahi ab). Jab tak koi OTP generate na hua ho,
+    // currentOtp null rehta hai taake verifyOtp() kabhi bhi khali/default match na kare.
+    private var currentOtp: String? = null
 
     fun generateOtp(): String {
-        currentOtp = (1000..9999).random().toString()
-        return currentOtp
+        val otp = (1000..9999).random().toString()
+        currentOtp = otp
+        return otp
     }
 
-    fun verifyOtp(entered: String): Boolean = entered == currentOtp || entered == "1234"
+    fun verifyOtp(entered: String): Boolean = entered.isNotBlank() && entered == currentOtp
 
     // ---- Current session (kis method/ID se ab login hai) — Settings panel mein
     // dikhane ke liye. Login success par saveSession() call hota hai, Logout par clear.

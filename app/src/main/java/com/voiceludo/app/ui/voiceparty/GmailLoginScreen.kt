@@ -28,8 +28,8 @@ private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA001
 private const val LOGIN_BUTTON = "https://i.postimg.cc/PqgDL1c1/IMG-20260831-WA0014.jpg"
 
 // Panel se test kiye gaye final numbers — ab permanent bake kar diye.
-private const val EMAIL_ICON_WIDTH = 112
-private const val EMAIL_ICON_HEIGHT = 56
+private const val EMAIL_ICON_WIDTH = 80
+private const val EMAIL_ICON_HEIGHT = 40
 private const val EMAIL_ICON_OFFSET_X = 0
 private const val EMAIL_ICON_OFFSET_Y = 0
 private const val EMAIL_INPUT_HEIGHT = 56
@@ -217,7 +217,7 @@ fun GmailLoginScreen(navController: NavController) {
                 LinkRow(
                     leftText = "Forgot Password?",
                     rightText = "Sign Up",
-                    onLeft = { },
+                    onLeft = { navController.navigate("vp_forgot_password") },
                     onRight = { navController.navigate("vp_gmail_signup") }
                 )
             }

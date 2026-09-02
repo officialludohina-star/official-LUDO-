@@ -39,6 +39,7 @@ import com.voiceludo.app.ui.voiceparty.MobileLoginScreen
 import com.voiceludo.app.ui.voiceparty.FacebookLoginScreen
 import com.voiceludo.app.ui.voiceparty.GmailLoginScreen
 import com.voiceludo.app.ui.voiceparty.GmailSignupScreen
+import com.voiceludo.app.ui.voiceparty.ForgotPasswordScreen
 import com.voiceludo.app.ui.voiceparty.SetPasswordScreen
 import com.voiceludo.app.ui.voiceparty.YallaHomeScreen
 import com.voiceludo.app.ui.voiceparty.ProfileEditScreen
@@ -143,6 +144,7 @@ class MainActivity : ComponentActivity() {
                         composable("vp_facebook_login") { FacebookLoginScreen(navController) }
                         composable("vp_gmail_login") { GmailLoginScreen(navController) }
                         composable("vp_gmail_signup") { GmailSignupScreen(navController) }
+                        composable("vp_forgot_password") { ForgotPasswordScreen(navController) }
                         composable(
                             "vp_set_password/{method}/{contact}",
                             arguments = listOf(

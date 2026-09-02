@@ -117,7 +117,7 @@ fun GmailSignupScreen(navController: NavController) {
                                         otpSent = true
                                         secondsLeft = 60
                                         if (!success) {
-                                            errorText = "Email bhejne mein masla hua — 1234 se try karein."
+                                            errorText = "Email bhejne mein masla hua — dobara 'Obtain' dabayein ya thodi der baad try karein."
                                         }
                                         scope.launch {
                                             while (secondsLeft > 0) { delay(1000); secondsLeft-- }
@@ -145,14 +145,12 @@ fun GmailSignupScreen(navController: NavController) {
                 if (otpSent) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Verification code $email par email kar diya gaya hai.",
+                        "Verification code has been sent to $email",
                         color = Color(0xFF0a7a42), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                         modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )
-                    // Fallback: agar kisi wajah se (internet/spam-filter) email na pahunche,
-                    // 1234 hamesha bhi kaam kar jata hai — asal index.html jaisa hi safety net.
                     Text(
-                        "Email na aaye to 1234 use kar sakte hain.",
+                        "Didn't receive it? Please check your Spam or Junk folder.",
                         color = Color(0xFF6b8f7a), fontSize = 10.sp,
                         modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )
