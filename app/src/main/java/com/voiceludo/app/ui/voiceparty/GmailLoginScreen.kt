@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+import com.voiceludo.app.ui.ludo.NO_CONNECTION_ICON
 import kotlinx.coroutines.delay
 
 private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
@@ -51,6 +52,9 @@ fun GmailLoginScreen(navController: NavController) {
     var errorText by remember { mutableStateOf("") }
     var debugText by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
+    // WebSocket bekend se connect hi na ho paye (net na ho ya server down) — is
+    // waqt baar-baar screen par NO_CONNECTION_ICON dikhaya jata hai.
+    var connectionLost by remember { mutableStateOf(false) }
 
     // Agar loading 10 second se zyada chale (slow network / server down) to
     // khud hi timeout error dikha do — hamesha ghoomta hua spinner nahi rehna chahiye.
@@ -74,23 +78,27 @@ fun GmailLoginScreen(navController: NavController) {
             when (msg) {
                 is ServerMessage.Auth -> {
                     loading = false
+                    connectionLost = false
                     AccountStore.saveSession(context, "gmail", email)
                     navController.navigate("vp_home")
                 }
                 is ServerMessage.Err -> {
                     loading = false
+                    connectionLost = false
                     errorText = if (msg.message.isNotBlank()) msg.message else "Server ne error bheja (khali message)"
                 }
                 is ServerMessage.ConnectionClosed -> {
                     // Pehle yahan kuch nahi hota tha — agar WebSocket connect hi na ho pae
                     // (server down/unreachable), loading hamesha ke liye ghoomta rehta tha
                     // aur koi error kabhi nazar nahi aata tha. Ab connection fail hone par
-                    // seedha error dikha dete hain.
+                    // seedha error + NO_CONNECTION_ICON dikha dete hain.
+                    connectionLost = true
                     if (loading) {
                         loading = false
                         errorText = "Server se connect nahi ho saka: ${msg.reason}"
                     }
                 }
+                is ServerMessage.ConnectionOpened -> connectionLost = false
                 else -> {}
             }
         }
@@ -142,13 +150,23 @@ fun GmailLoginScreen(navController: NavController) {
 
                 if (errorText.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        errorText, color = Color(0xFFcc3333), fontSize = 11.sp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFfdecec), RoundedCornerShape(8.dp))
-                            .padding(8.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (connectionLost) {
+                            AsyncImage(
+                                model = NO_CONNECTION_ICON,
+                                contentDescription = "no connection",
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(
+                            errorText, color = Color(0xFFcc3333), fontSize = 11.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(Color(0xFFfdecec), RoundedCornerShape(8.dp))
+                                .padding(8.dp)
+                        )
+                    }
                 }
 
                 if (debugText.isNotEmpty()) {

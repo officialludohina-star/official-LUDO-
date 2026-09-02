@@ -82,11 +82,23 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
     DisposableEffect(matched) {
         val listener: (ServerMessage) -> Unit = { msg ->
             when (msg) {
-                is ServerMessage.Events -> state.onServerEvents(msg.events, msg.state)
+                is ServerMessage.Events -> { state.onConnectionRestored(); state.onServerEvents(msg.events, msg.state) }
                 is ServerMessage.OpponentLeft -> opponentLeftMsg = "${msg.color} game chhod gaya"
                 is ServerMessage.OpponentProfile -> state.onOpponentProfile(msg.color, msg.name, msg.avatar)
                 is ServerMessage.TurnTimer -> state.onTurnTimer(msg.color, msg.seconds)
                 is ServerMessage.Wallet -> msg.message?.let { walletMsg = it }
+                // Apna khud ka connection toota — "Reconnecting…" overlay + 30s countdown
+                // shuru; BackendClient khud reconnect hote hi "resume" bhej dega.
+                is ServerMessage.ConnectionClosed -> state.onConnectionLost()
+                // Bekend ne poora room/game state wapis de diya — seedha usi se sync
+                // kar lete hain, koi dobara navigate/re-match nahi karna.
+                is ServerMessage.Resumed -> {
+                    state.applyInitialSnapshot(msg.state)
+                    state.applyInitialProfiles(msg.profiles)
+                    state.onConnectionRestored()
+                }
+                is ServerMessage.OpponentDisconnected -> walletMsg = "${msg.color} ka connection chala gaya — reconnect ka intezaar"
+                is ServerMessage.OpponentReconnected -> walletMsg = "${msg.color} wapis aa gaya"
                 else -> {}
             }
         }
@@ -94,6 +106,14 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
         onDispose {
             BackendClient.removeListener(listener)
             BackendClient.leaveRoom()
+        }
+    }
+
+    // Apna "Exit" tap karne par game jaan-boojh kar chhod ke wapis mode-select par
+    val requestExit by state.requestExit
+    LaunchedEffect(requestExit) {
+        if (requestExit) {
+            navController.popBackStack()
         }
     }
     // walletMsg kuch der dikha kar khud gayab ho jata hai (naya message aaye ya na aaye)
@@ -462,6 +482,53 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 },
                 confirmButton = {
                     TextButton(onClick = { showBetInfo = false }) { Text("Close") }
+                }
+            )
+        }
+
+        // ---- Net drop overlay: "Reconnecting… 30s" (game peeche dikhti rehti hai,
+        // isi bar-jaise banner ke sath). Server apni taraf se pending player ki
+        // turn khud auto-play karta rehta hai isi dauran. ----
+        val connectionLost by state.connectionLost
+        val reconnectSeconds by state.reconnectSecondsLeft
+        if (connectionLost) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 60.dp)
+                    .background(Color(0xFF222222).copy(alpha = 0.92f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = NO_CONNECTION_ICON,
+                        contentDescription = "no connection",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Reconnecting… ${reconnectSeconds}s",
+                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp
+                    )
+                }
+            }
+        }
+
+        // 30 second guzar gaye aur wapis connect nahi hua — Exit/Connect popup
+        val showReconnectChoice by state.showReconnectChoice
+        if (showReconnectChoice) {
+            AlertDialog(
+                onDismissRequest = { /* deliberately no-op — user ko choose karna hai */ },
+                icon = {
+                    AsyncImage(model = NO_CONNECTION_ICON, contentDescription = "no connection", modifier = Modifier.size(36.dp))
+                },
+                title = { Text("Connection chali gayi", fontWeight = FontWeight.Black) },
+                text = { Text("30 second tak reconnect nahi ho saka. Dobara try karein ya game chhod dein?") },
+                confirmButton = {
+                    TextButton(onClick = { state.retryConnect() }) { Text("Connect") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { state.exitGame() }) { Text("Exit") }
                 }
             )
         }

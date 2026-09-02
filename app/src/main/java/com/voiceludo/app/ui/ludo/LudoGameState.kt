@@ -74,6 +74,65 @@ class LudoGameState(
     // rehti hai (0 = us player ke liye is game mein lock ho chuka).
     val extraRollNextCost = mutableStateMapOf<LudoColor, Long>()
 
+    // ---- Net/connection drop UI: "Reconnecting…" overlay 30-second countdown se
+    // shuru hoti hai. Agar 30 second guzar jayen aur wapis connect na ho, to
+    // "Exit / Connect" popup dikhta hai — Exit game chhod deta hai (forfeit),
+    // Connect dobara try karta hai (naya 30-second window). Asal enforcement
+    // (kab tak reconnect allowed hai) hamesha bekend par hoti hai — yeh sirf
+    // display/local retry-trigger hai. ----
+    var connectionLost = mutableStateOf(false)
+    var reconnectSecondsLeft = mutableStateOf(30)
+    var showReconnectChoice = mutableStateOf(false)
+    private var reconnectJob: kotlinx.coroutines.Job? = null
+
+    fun onConnectionLost() {
+        if (gameOver.value) return
+        connectionLost.value = true
+        showReconnectChoice.value = false
+        startReconnectCountdown()
+    }
+
+    private fun startReconnectCountdown() {
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+            for (s in 30 downTo 1) {
+                reconnectSecondsLeft.value = s
+                // Har ~4 second mein khud hi reconnect try karte rehte hain (sirf
+                // countdown dikhana kaafi nahi, asal koshish bhi honi chahiye) —
+                // net wapis aate hi yeh apne aap successful ho jayegi.
+                if (s % 4 == 0) BackendClient.reconnect()
+                delay(1000)
+                if (!connectionLost.value) return@launch
+            }
+            if (connectionLost.value) showReconnectChoice.value = true
+        }
+    }
+
+    // Server se "resumed" ya koi bhi naya "events" mil jana khud connection theek
+    // hone ka saboot hai.
+    fun onConnectionRestored() {
+        if (!connectionLost.value) return
+        reconnectJob?.cancel()
+        connectionLost.value = false
+        showReconnectChoice.value = false
+        reconnectSecondsLeft.value = 30
+    }
+
+    // "Connect" button — network dobara check karke ek aur 30-second window try karo
+    fun retryConnect() {
+        showReconnectChoice.value = false
+        BackendClient.reconnect()
+        startReconnectCountdown()
+    }
+
+    // "Exit" button — game jaan-boojh kar chhod dena (forfeit) — asal "leave" call
+    // aur navigation LudoGameScreen khud sambhalta hai is flag ko dekh kar.
+    var requestExit = mutableStateOf(false)
+    fun exitGame() {
+        showReconnectChoice.value = false
+        requestExit.value = true
+    }
+
     // ---- Har player ka naam + DP — "matched" message ke profiles map se shuru hoti
     // hai, aur "opponentProfile" event se real-time update hoti rehti hai (jab koi
     // player mid-game apna naam/photo badle). ----

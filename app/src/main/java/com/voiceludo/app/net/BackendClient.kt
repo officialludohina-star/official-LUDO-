@@ -97,6 +97,18 @@ sealed class ServerMessage {
         val profiles: Map<String, Profile>
     ) : ServerMessage()
     data class Events(val events: List<GameEvent>, val state: GameSnapshot) : ServerMessage()
+    // Net drop ke baad wapis connect hone par (BackendClient khud "resume" bhej
+    // deta hai agar hum kisi active game mein thay) — poora room/game state
+    // Matched jaisa hi wapis milta hai, koi navigation/re-match nahi hota.
+    data class Resumed(
+        val roomId: String, val color: String, val players: List<String>, val mode: String,
+        val bet: Int, val coins: Long, val diamonds: Long, val state: GameSnapshot,
+        val profiles: Map<String, Profile>
+    ) : ServerMessage()
+    // Opponent ka connection toot gaya — bekend seconds batata hai (reconnect
+    // grace window) jitni der tak wo wapis aa sakta hai bina haarne ke.
+    data class OpponentDisconnected(val color: String, val seconds: Int) : ServerMessage()
+    data class OpponentReconnected(val color: String) : ServerMessage()
     data class Wallet(val color: String?, val coins: Long?, val diamonds: Long?, val message: String?) : ServerMessage()
     data class OpponentLeft(val color: String) : ServerMessage()
     // Kisi opponent ne mid-game apna naam/avatar badla (updateProfile bheja) —
@@ -146,6 +158,12 @@ object BackendClient {
         return m
     }
 
+    // inGame — jab tak yeh true hai, agar socket kabhi bhi (net jaane se) toot
+    // kar wapis khule to onOpen khud "resume" bhej deta hai (naya login/signup
+    // nahi maangta). "matched"/"resumed" par true hota hai, leaveRoom() ya
+    // forceLogout par false.
+    @Volatile private var inGame = false
+
     fun addListener(l: ServerListener) { listeners.add(l) }
     fun removeListener(l: ServerListener) { listeners.remove(l) }
 
@@ -171,6 +189,14 @@ object BackendClient {
         val request = Request.Builder().url(WS_URL).build()
         socket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                // Agar hum kisi active game ke beech mein thay (net drop se pehle),
+                // to sab se pehle purana session "resume" kar lete hain — koi
+                // dobara login/signup nahi maangta, seedha wahi room/state wapis
+                // mil jati hai. Yeh signup/login se bhi pehle jata hai.
+                val token = authToken
+                if (inGame && token != null) {
+                    webSocket.send(JSONObject().put("type", "resume").put("auth_token", token).toString())
+                }
                 synchronized(pending) {
                     pending.forEach { webSocket.send(it.toString()) }
                     pending.clear()
@@ -237,7 +263,18 @@ object BackendClient {
     }
 
     fun leaveRoom() {
+        inGame = false
         send(JSONObject().put("type", "leave"))
+    }
+
+    // reconnect() — user "Connect" button tap kare (network wapis check karne
+    // ke liye) ya app khud dobara koshish karna chahe. Purana dead socket hata
+    // kar naya connection kholta hai — onOpen() khud "resume" bhej dega
+    // (inGame abhi tak true hai to).
+    fun reconnect() {
+        socket?.cancel()
+        socket = null
+        ensureConnected()
     }
 
     // Naam/avatar badalne ke liye — avatar hamesha pehle uploadAvatar() se mile
@@ -383,6 +420,7 @@ object BackendClient {
                 "matched" -> {
                     if (obj.has("coins")) coins = obj.optLong("coins")
                     val snap = parseSnapshot(obj.optJSONObject("state")) ?: return null
+                    inGame = true
                     val m = ServerMessage.Matched(
                         roomId = obj.optString("room_id"),
                         color = obj.optString("color"),
@@ -396,6 +434,25 @@ object BackendClient {
                     lastMatch = m
                     m
                 }
+                "resumed" -> {
+                    if (obj.has("coins")) coins = obj.optLong("coins")
+                    if (obj.has("diamonds")) diamonds = obj.optLong("diamonds")
+                    val snap = parseSnapshot(obj.optJSONObject("state")) ?: return null
+                    inGame = true
+                    ServerMessage.Resumed(
+                        roomId = obj.optString("room_id"),
+                        color = obj.optString("color"),
+                        players = jsonArrayToStringList(obj.optJSONArray("players")),
+                        mode = obj.optString("mode"),
+                        bet = obj.optInt("bet"),
+                        coins = coins,
+                        diamonds = diamonds,
+                        state = snap,
+                        profiles = parseProfiles(obj.optJSONObject("profiles"))
+                    )
+                }
+                "opponentDisconnected" -> ServerMessage.OpponentDisconnected(obj.optString("color"), obj.optInt("seconds", 60))
+                "opponentReconnected" -> ServerMessage.OpponentReconnected(obj.optString("color"))
                 "events" -> {
                     val snap = parseSnapshot(obj.optJSONObject("state")) ?: return null
                     ServerMessage.Events(events = parseEvents(obj.optJSONArray("events")), state = snap)
@@ -425,6 +482,7 @@ object BackendClient {
                     // isi purani auth se kuch bhejne ki koshish na kare.
                     playerId = null
                     authToken = null
+                    inGame = false
                     ServerMessage.ForceLogout(obj.optString("message"))
                 }
                 else -> null

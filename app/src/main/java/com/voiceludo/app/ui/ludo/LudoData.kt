@@ -115,7 +115,11 @@ const val DICE_ROLL_GIF = "file:///android_asset/img/dice-roll-animation.gif"
 
 // Matching screen ("Opponents dhoonde ja rahe hain...") ke dauran chalne wali gif —
 // HINAX ka diya hua asal link.
-const val MATCHING_SEARCH_GIF = "https://i.postimg.cc/FK838KM0/match.gif"
+const val MATCHING_SEARCH_GIF = "https://i.postimg.cc/T313Wvwm/match.gif"
+
+// Jab internet na ho ya frontend bekend WebSocket se connect na ho pa raha ho —
+// yehi icon baar-baar (jahan bhi connection fail/lost dikhana ho) use hota hai.
+const val NO_CONNECTION_ICON = "https://i.postimg.cc/hGXpXvTZ/IMG-20260902-WA0005.jpg"
 
 val DICE_FACE_IMG: Map<Int, String> = mapOf(
     1 to "file:///android_asset/img/1.png",

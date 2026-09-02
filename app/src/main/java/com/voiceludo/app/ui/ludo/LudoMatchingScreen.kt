@@ -40,6 +40,21 @@ fun LudoMatchingScreen(
     var waitingText by remember { mutableStateOf("Opponents dhoonde ja rahe hain...") }
     var foundCount by remember { mutableStateOf(1) }
     var errorText by remember { mutableStateOf<String?>(null) }
+    // Agar matchmaking ke doraan hi bekend se connection toot jaye (net drop)
+    // to yeh true ho jata hai — NO_CONNECTION_ICON dikhane ke liye. Server khud
+    // reconnect hote hi (BackendClient.reconnect()) join wapis nahi bhejta —
+    // isliye connection wapis aate hi hum khud dobara "join" bhej dete hain
+    // taake queue mein wapis shamil ho jayen.
+    var connectionLost by remember { mutableStateOf(false) }
+
+    LaunchedEffect(connectionLost) {
+        if (connectionLost) {
+            while (connectionLost) {
+                BackendClient.reconnect()
+                kotlinx.coroutines.delay(4000)
+            }
+        }
+    }
 
     DisposableEffect(mode, players, magic, betIndex) {
         val listener: (ServerMessage) -> Unit = { msg ->
@@ -59,6 +74,16 @@ fun LudoMatchingScreen(
                 }
                 is ServerMessage.Err -> {
                     errorText = msg.message
+                }
+                is ServerMessage.ConnectionClosed -> {
+                    connectionLost = true
+                }
+                is ServerMessage.ConnectionOpened -> {
+                    if (connectionLost) {
+                        // net wapis aa gaya — matchmaking queue mein dobara shamil ho jate hain
+                        connectionLost = false
+                        BackendClient.join(mode, bet, players, magic)
+                    }
                 }
                 else -> {}
             }
@@ -81,15 +106,17 @@ fun LudoMatchingScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Matching/searching gif — jab tak asal opponent bekend se nahi mil jata
-            // (ServerMessage.Matched aane tak) yeh chalti rehti hai.
+            // (ServerMessage.Matched aane tak) yeh chalti rehti hai. Connection hi
+            // toot jaye to isi jagah NO_CONNECTION_ICON dikhata hai (baar-baar retry
+            // ke sath, jab tak wapis connect na ho jaye).
             AsyncImage(
-                model = MATCHING_SEARCH_GIF,
-                contentDescription = "searching",
+                model = if (connectionLost) NO_CONNECTION_ICON else MATCHING_SEARCH_GIF,
+                contentDescription = if (connectionLost) "no connection" else "searching",
                 modifier = Modifier.size(90.dp)
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                waitingText,
+                if (connectionLost) "Connection nahi hai — reconnect ki koshish ja rahi hai..." else waitingText,
                 color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
