@@ -487,7 +487,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { navController.popBackStack() }) { Text("Wapis Mode Select") }
+                Button(onClick = { navController.popBackStack() }) { Text("Back to Mode Select") }
             }
         }
 
@@ -556,8 +556,8 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 icon = {
                     AsyncImage(model = NO_CONNECTION_ICON, contentDescription = "no connection", modifier = Modifier.size(36.dp))
                 },
-                title = { Text("Connection chali gayi", fontWeight = FontWeight.Black) },
-                text = { Text("$RECONNECT_GRACE_SECONDS second tak reconnect nahi ho saka. Dobara try karein ya game chhod dein?") },
+                title = { Text("Connection lost", fontWeight = FontWeight.Black) },
+                text = { Text("Could not reconnect within $RECONNECT_GRACE_SECONDS seconds. Try again or leave the game?") },
                 confirmButton = {
                     TextButton(onClick = { state.retryConnect() }) { Text("Connect") }
                 },

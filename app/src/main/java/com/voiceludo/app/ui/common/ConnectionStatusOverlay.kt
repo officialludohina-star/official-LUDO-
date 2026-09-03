@@ -41,9 +41,9 @@ fun ConnectionStatusOverlay(modifier: Modifier = Modifier) {
 
     val show = !hasInternet || connState != ConnState.CONNECTED
     val message = when {
-        !hasInternet -> "Internet nahi hai — connection check karein"
-        connState == ConnState.CONNECTING -> "Server se connect ho raha hai..."
-        else -> "Server se connection nahi hai"
+        !hasInternet -> "No internet — please check your connection"
+        connState == ConnState.CONNECTING -> "Connecting to server..."
+        else -> "No connection to server"
     }
 
     AnimatedVisibility(visible = show, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {

@@ -117,7 +117,7 @@ fun GmailSignupScreen(navController: NavController) {
                                         otpSent = true
                                         secondsLeft = 60
                                         if (!success) {
-                                            errorText = "Email bhejne mein masla hua — dobara 'Obtain' dabayein ya thodi der baad try karein."
+                                            errorText = "Could not send email — tap 'Obtain' again or try later."
                                         }
                                         scope.launch {
                                             while (secondsLeft > 0) { delay(1000); secondsLeft-- }

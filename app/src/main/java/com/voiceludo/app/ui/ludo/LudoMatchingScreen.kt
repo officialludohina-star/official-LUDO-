@@ -17,9 +17,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.material3.CircularProgressIndicator
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+
+// User ne diya hua torn-paper/ribbon style blue banner — player naam tag ke
+// peeche background ke taur par (game start hote hi dikhta hai).
+private const val PLAYER_NAME_BANNER = "https://i.postimg.cc/T3C5ckRd/file-000000000da882088a81c4962bde4afa.png"
 
 // Asal HTML ke #ludoMatchingScreen jaisa hi — bet confirm hone ke baad "opponents
 // dhoonda ja raha hai" wala screen. Ab yeh REAL bekend se real matchmaking karta
@@ -116,15 +122,20 @@ fun LudoMatchingScreen(
             // (ServerMessage.Matched aane tak) yeh chalti rehti hai. Connection hi
             // toot jaye to isi jagah NO_CONNECTION_ICON dikhata hai (baar-baar retry
             // ke sath, jab tak wapis connect na ho jaye).
-            AsyncImage(
+            // SubcomposeAsyncImage — agar hosted GIF kabhi load na ho paye (broken
+            // link/slow network), khali jagah chhodne ki bajaye ek spinner dikhata
+            // hai taake screen hamesha "kuch ho raha hai" jaisa lage.
+            SubcomposeAsyncImage(
                 model = if (connectionLost) NO_CONNECTION_ICON else MATCHING_SEARCH_GIF,
                 contentDescription = if (connectionLost) "no connection" else "searching",
-                modifier = Modifier.size(90.dp)
+                modifier = Modifier.size(90.dp),
+                loading = { CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp) },
+                error = { CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp) }
             )
             Spacer(Modifier.height(10.dp))
             if (connectionLost) {
                 Text(
-                    "Connection nahi hai — reconnect ki koshish ja rahi hai...",
+                    "No connection — trying to reconnect...",
                     color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
@@ -196,8 +207,20 @@ fun LudoMatchingScreen(
                         )
                         // "VS" sirf dono avatars ke theek beech mein (1v1 look) — waqfa
                         // (gap) horizontalArrangement.spacedBy se pehle hi mil jata hai.
+                        // VS badge — pehle ek hosted image (VS_ICON_IMG) se aata tha
+                        // jo kabhi kabhi load hi nahi hoti thi (broken/slow hosted
+                        // link). Ab guaranteed-render Compose badge hai, koi network
+                        // dependency nahi.
                         if (players == 2 && i == 0) {
-                            AsyncImage(model = VS_ICON_IMG, contentDescription = "VS", modifier = Modifier.size(40.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.verticalGradient(listOf(Color(0xFFffd93b), Color(0xFFff9500)))),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("VS", color = Color(0xFF1a1a1a), fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            }
                         }
                     }
                 }
@@ -243,10 +266,12 @@ private fun MatchPlayerSlot(name: String, avatarUrl: String?, isSearching: Boole
             if (isSearching) {
                 // Koi aur player dhoondte hue is slot mein wahi searching-gif chalti
                 // hai jo screen ke oopar bhi chal rahi hai — static spinner ki jagah.
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = MATCHING_SEARCH_GIF,
-                    contentDescription = "dhoondh rahe hain",
-                    modifier = Modifier.size(60.dp)
+                    contentDescription = "searching",
+                    modifier = Modifier.size(60.dp),
+                    loading = { CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp) },
+                    error = { CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp) }
                 )
             } else {
                 AsyncImage(
@@ -258,14 +283,22 @@ private fun MatchPlayerSlot(name: String, avatarUrl: String?, isSearching: Boole
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(
-            name,
-            color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp,
-            maxLines = 1,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF143c64).copy(alpha = 0.75f))
-                .padding(horizontal = 8.dp, vertical = 3.dp)
-        )
+        // Naam ab blue banner (torn-ribbon) graphic ke upar dikhta hai, plain
+        // solid-color box ki jagah — game start hote hi player ke peeche yehi
+        // banner nazar aata hai.
+        Box(contentAlignment = Alignment.Center) {
+            AsyncImage(
+                model = PLAYER_NAME_BANNER,
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.width(96.dp).height(32.dp)
+            )
+            Text(
+                name,
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 10.dp)
+            )
+        }
     }
 }

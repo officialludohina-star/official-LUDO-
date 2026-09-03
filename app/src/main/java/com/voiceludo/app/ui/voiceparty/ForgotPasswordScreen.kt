@@ -76,7 +76,7 @@ fun ForgotPasswordScreen(navController: NavController) {
                 is ServerMessage.ConnectionClosed -> {
                     if (loading) {
                         loading = false
-                        errorText = "Server se connect nahi ho saka: ${msg.reason}"
+                        errorText = "Could not connect to server: ${msg.reason}"
                     }
                 }
                 else -> {}
@@ -281,7 +281,7 @@ fun ForgotPasswordScreen(navController: NavController) {
         }
 
         if (loading) {
-            LoadingOverlay(if (step == 1) "Code bheja ja raha hai..." else "Password reset ho raha hai...")
+            LoadingOverlay(if (step == 1) "Sending code..." else "Resetting password...")
         }
     }
 }

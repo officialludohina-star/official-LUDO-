@@ -22,10 +22,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -89,6 +92,8 @@ fun ProfileEditScreen(navController: NavController) {
     var showFlagDialog by remember { mutableStateOf(false) }
     var avatarUploading by remember { mutableStateOf(false) }
     var avatarError by remember { mutableStateOf<String?>(null) }
+    var idCopied by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboardManager.current
 
     // Naam/avatar badalte hi bekend (real account, game-partners ko dikhne wala)
     // ko bhi sync kar dete hain — kabhi bhi local file path avatar ke taur par
@@ -208,12 +213,14 @@ fun ProfileEditScreen(navController: NavController) {
                     Spacer(Modifier.width(16.dp))
 
                     // Upload button — avatar ke bagal mein, tap karte hi gallery/photo-picker khul jati hai.
+                    // Pehle se bara (108x76) aur ab koi green border nahi — sirf halka
+                    // saya (shadow) taake button khud ubhar kar dikhe, bina border ke.
                     Box(
                         modifier = Modifier
-                            .size(width = 84.dp, height = 60.dp)
-                            .clip(RoundedCornerShape(10.dp))
+                            .size(width = 108.dp, height = 76.dp)
+                            .shadow(4.dp, RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
-                            .border(2.dp, ProfileGreenAccent, RoundedCornerShape(10.dp))
                             .clickable {
                                 pickPhoto.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -224,7 +231,7 @@ fun ProfileEditScreen(navController: NavController) {
                         AsyncImage(
                             model = UPLOAD_PHOTO_ICON,
                             contentDescription = "upload photo",
-                            modifier = Modifier.size(34.dp)
+                            modifier = Modifier.size(44.dp)
                         )
                     }
                 }
@@ -232,7 +239,7 @@ fun ProfileEditScreen(navController: NavController) {
                 if (avatarUploading) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Photo upload ho rahi hai...",
+                        "Uploading photo...",
                         color = ProfileGreenDark,
                         fontSize = 11.sp,
                         modifier = Modifier.fillMaxWidth(),
@@ -259,6 +266,43 @@ fun ProfileEditScreen(navController: NavController) {
                     valueColor = ProfileGreenDark,
                     onClick = { showNameDialog = true }
                 )
+
+                // ---- Player ID — bekend server ne jo asal ID di hai, tap karte hi
+                // clipboard par copy ho jati hai (dosto ko share karne ke liye). ----
+                BackendClient.playerId?.let { id ->
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    clipboard.setText(AnnotatedString(id))
+                                    idCopied = true
+                                }
+                                .padding(vertical = 14.dp, horizontal = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Player ID", color = Color(0xFFa0c0a0), fontSize = 10.sp)
+                                Text("ID: $id", color = ProfileGreenDark, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                            Text(
+                                if (idCopied) "Copied!" else "Copy",
+                                color = if (idCopied) ProfileGreenAccent else Color(0xFF0a7a42),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                        RowDivider()
+                    }
+                    LaunchedEffect(idCopied) {
+                        if (idCopied) {
+                            kotlinx.coroutines.delay(1500)
+                            idCopied = false
+                        }
+                    }
+                }
+
                 // ---- Flag ----
                 Row(
                     modifier = Modifier

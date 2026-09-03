@@ -63,7 +63,7 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
                 is ServerMessage.ConnectionClosed -> {
                     if (loading) {
                         loading = false
-                        errorText = "Server se connect nahi ho saka: ${msg.reason}"
+                        errorText = "Could not connect to server: ${msg.reason}"
                     }
                 }
                 else -> {}
@@ -196,7 +196,7 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
         }
 
         if (loading) {
-            LoadingOverlay("Account ban raha hai...")
+            LoadingOverlay("Creating account...")
         }
     }
 }

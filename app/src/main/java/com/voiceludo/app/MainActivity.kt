@@ -33,6 +33,8 @@ import coil.Coil
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import com.voiceludo.app.ui.ludo.LudoModeSelectScreen
 import com.voiceludo.app.ui.ludo.LudoGameScreen
 import com.voiceludo.app.ui.ludo.LudoMatchingScreen
@@ -97,6 +99,15 @@ class MainActivity : ComponentActivity() {
         // Dice-roll GIF (aur koi bhi doosri animated GIF) ko sahi se animate karne ke liye
         // Coil ke default ImageLoader mein GIF decoder register karna zaroori hai — warna
         // AsyncImage GIF ka sirf pehla frame static dikhata hai.
+        //
+        // Disk + memory cache bhi yahan explicitly configure ki hai, aur
+        // respectCacheHeaders(false) lagaya hai — hamare hosted images (i.postimg.cc)
+        // sahi Cache-Control headers nahi bhejtin, is wajah se Coil unhe by-default
+        // kabhi disk par cache hi nahi karta tha aur app khulte hi HAR baar dobara
+        // poori tarah internet se load hoti thin (isi liye pehli baar dhundla/khali
+        // dikhta tha jab tak network na aa jaye). Ab ek dafa load hone ke baad
+        // (chahe pichli app-session mein hi kyun na ho) yeh images disk cache se
+        // turant mil jati hain — bina internet ka intezaar kiye.
         val gifImageLoader = ImageLoader.Builder(this)
             .components {
                 if (Build.VERSION.SDK_INT >= 28) {
@@ -105,6 +116,18 @@ class MainActivity : ComponentActivity() {
                     add(GifDecoder.Factory())
                 }
             }
+            .memoryCache {
+                MemoryCache.Builder(this)
+                    .maxSizePercent(0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.05)
+                    .build()
+            }
+            .respectCacheHeaders(false)
             .build()
         Coil.setImageLoader(gifImageLoader)
 
@@ -144,7 +167,7 @@ class MainActivity : ComponentActivity() {
                     DisposableEffect(Unit) {
                         val listener: (ServerMessage) -> Unit = { msg ->
                             if (msg is ServerMessage.ForceLogout) {
-                                forceLogoutMsg = msg.message.ifBlank { "Aapki ID kisi doosre phone/device par login ho gayi hai." }
+                                forceLogoutMsg = msg.message.ifBlank { "Your ID has been logged in on another phone/device." }
                             }
                         }
                         BackendClient.addListener(listener)

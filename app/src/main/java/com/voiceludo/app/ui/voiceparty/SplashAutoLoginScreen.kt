@@ -62,6 +62,6 @@ fun SplashAutoLoginScreen(navController: NavController) {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0a2f1a))) {
-        LoadingOverlay("Aapka session bahal kiya ja raha hai...")
+        LoadingOverlay("Restoring your session...")
     }
 }

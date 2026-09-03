@@ -52,7 +52,6 @@ fun GmailLoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf("") }
-    var debugText by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     // WebSocket bekend se connect hi na ho paye (net na ho ya server down) — is
     // waqt baar-baar screen par NO_CONNECTION_ICON dikhaya jata hai.
@@ -65,18 +64,13 @@ fun GmailLoginScreen(navController: NavController) {
             delay(10000)
             if (loading) {
                 loading = false
-                errorText = "Timeout: 10 second mein server se koi response nahi aaya. Network check karein."
+                errorText = "Timeout: no response from server in 10 seconds. Please check your network."
             }
         }
     }
 
     DisposableEffect(Unit) {
         val listener: (ServerMessage) -> Unit = { msg ->
-            debugText = if (msg is ServerMessage.ConnectionClosed) {
-                "Debug: connection closed -> reason: '${msg.reason}'"
-            } else {
-                "Debug: server se mila -> ${msg::class.simpleName}"
-            }
             when (msg) {
                 is ServerMessage.Auth -> {
                     loading = false
@@ -98,7 +92,7 @@ fun GmailLoginScreen(navController: NavController) {
                     connectionLost = true
                     if (loading) {
                         loading = false
-                        errorText = "Server se connect nahi ho saka: ${msg.reason}"
+                        errorText = "Could not connect to server: ${msg.reason}"
                     }
                 }
                 is ServerMessage.ConnectionOpened -> connectionLost = false
@@ -172,14 +166,6 @@ fun GmailLoginScreen(navController: NavController) {
                     }
                 }
 
-                if (debugText.isNotEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        debugText, color = Color(0xFF1565C0), fontSize = 10.sp,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
                 Spacer(Modifier.height(16.dp))
 
                 val loginEnabled = pass.isNotBlank() && !loading
@@ -194,7 +180,6 @@ fun GmailLoginScreen(navController: NavController) {
                                 else -> {
                                     loading = true
                                     errorText = ""
-                                    debugText = "Debug: connecting..."
                                     BackendClient.login(email, pass)
                                 }
                             }
@@ -229,7 +214,7 @@ fun GmailLoginScreen(navController: NavController) {
         // Jab tak bekend se jawab (Auth ya error) na aa jaye, poori screen block —
         // aage nahi badh sakte, dobara button bhi nahi daba sakte.
         if (loading) {
-            LoadingOverlay("Login ho raha hai...")
+            LoadingOverlay("Logging in...")
         }
     }
 }
