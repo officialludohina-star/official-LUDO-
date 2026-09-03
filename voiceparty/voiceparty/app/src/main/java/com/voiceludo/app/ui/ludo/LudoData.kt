@@ -113,15 +113,6 @@ val TOKEN_IMG: Map<LudoColor, String> = mapOf(
 // kabhi load hi nahi hoti thi — is se "roll hui ya nahi" pata nahi chalta tha.
 const val DICE_ROLL_GIF = "file:///android_asset/img/dice-roll-animation.gif"
 
-// Matching screen ("Opponents dhoonde ja rahe hain...") ke dauran chalne wali gif —
-// HINAX ka diya hua asal link.
-const val MATCHING_SEARCH_GIF = "https://i.postimg.cc/T313Wvwm/match.gif"
-const val VS_ICON_IMG = "https://i.postimg.cc/5214mgzR/bg-associate-watch-vs.webp"
-
-// Jab internet na ho ya frontend bekend WebSocket se connect na ho pa raha ho —
-// yehi icon baar-baar (jahan bhi connection fail/lost dikhana ho) use hota hai.
-const val NO_CONNECTION_ICON = "https://i.postimg.cc/hGXpXvTZ/IMG-20260902-WA0005.jpg"
-
 val DICE_FACE_IMG: Map<Int, String> = mapOf(
     1 to "file:///android_asset/img/1.png",
     2 to "file:///android_asset/img/2.png",
@@ -139,6 +130,10 @@ val RANK_BADGE_IMG: Map<Int, String> = mapOf(
 )
 
 const val DEFAULT_AVATAR_IMG = "file:///android_asset/img/user-icon.png"
+
+// Matching screen ("opponents dhoonda ja raha hai") — VS icon jo dono avatars
+// ke beech dikhta hai (1v1 layout mein).
+const val VS_ICON_IMG = "https://i.postimg.cc/5214mgzR/bg-associate-watch-vs.webp"
 const val MODE_2P_ICON = "file:///android_asset/img/game-online-2p-uncheck.png"
 const val MODE_4P_ICON = "file:///android_asset/img/game-online-4p-uncheck.png"
 
@@ -150,7 +145,7 @@ const val BET_PLUS_ICON = "file:///android_asset/img/regression-coin-add-check.w
 const val COIN_ICON = "file:///android_asset/img/coin.webp"
 const val GOLDEN_DICE_ICON = "file:///android_asset/img/icon-golden-dice.webp"
 
-val BET_OPTIONS = listOf(500, 2000, 10000, 20000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000, 20000000)
+val BET_OPTIONS = listOf(500, 2000, 10000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000)
 
 // Top bar + settings panel ke icons (asal HTML se hoobahoo)
 const val SETTINGS_ICON = "file:///android_asset/img/system.webp"
@@ -172,12 +167,6 @@ const val MAGIC_ROCKET_ICON = "file:///android_asset/img/rocket.webp"
 // Arrow mode ka center diagonal arrow overlay, Quick mode ka block-cell icon (board par)
 const val ARROW_CENTER_ICON = "file:///android_asset/img/1000100827-removebg-preview.png"
 const val QUICK_BLOCK_ICON = "file:///android_asset/img/file-000000002f0c8211aadf26f528f26971.png"
-
-// Bekend (hub.go: "const ReconnectGraceSeconds = 30") itni der tak disconnect
-// hue player ki jagah room mein reserve rakhta hai. Yeh value yahan bhi WAHI
-// honi chahiye — warna app "time khatam, Exit ya Connect chunein" popup
-// jald/der se dikhayegi jabke server ka asal window kuch aur hoga.
-const val RECONNECT_GRACE_SECONDS = 30
 
 fun ludoColorOf(c: LudoColor): androidx.compose.ui.graphics.Color = when (c) {
     LudoColor.RED -> androidx.compose.ui.graphics.Color(0xFFE53935)

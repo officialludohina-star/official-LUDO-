@@ -401,20 +401,22 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
 
         // "wallet" event ka message (jeetna/pot-credit/extra-roll confirmation) aur
         // "opponent left" — dono ek chhota banner top-center par, kuch second ke liye.
-        (walletMsg ?: opponentLeftMsg)?.let { msg ->
-            Text(
-                msg,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 60.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xF2143c64))
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            )
+        if (!state.gameOver.value) {
+            (walletMsg ?: opponentLeftMsg)?.let { msg ->
+                Text(
+                    msg,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 60.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xF2143c64))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
         }
 
         // Asal HTML ke #rollChoicePopup jaisa — jab ek movable token ke liye ek se
@@ -447,12 +449,44 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
         }
 
         if (state.gameOver.value) {
+            val winnerC = state.winnerColor.value
+            val winnerName = winnerC?.let { state.profiles[it]?.name?.takeIf(String::isNotBlank) ?: it.name } ?: "?"
+            val loserNames = state.players.filter { it != winnerC }
+                .map { state.profiles[it]?.name?.takeIf(String::isNotBlank) ?: it.name }
             Column(
-                modifier = Modifier.align(Alignment.Center),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .background(Color(0xF20A1423), RoundedCornerShape(16.dp))
+                    .border(1.5.dp, Color(0xFFFFCC33), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 28.dp, vertical = 22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(state.winnerText.value, color = Color.Yellow, style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(12.dp))
+                Text(
+                    "\uD83C\uDFC6 $winnerName JEET GAYA!",
+                    color = Color(0xFFFFD400),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center
+                )
+                if (winnerC != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "+$totalPool coins jeete",
+                        color = Color(0xFF6EE86E),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+                if (loserNames.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Haarne wale: ${loserNames.joinToString(", ")}",
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 12.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
                 Button(onClick = { navController.popBackStack() }) { Text("Wapis Mode Select") }
             }
         }
@@ -486,7 +520,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             )
         }
 
-        // ---- Net drop overlay: "Reconnecting… 30s" (game peeche dikhti rehti hai,
+        // ---- Net drop overlay: "Reconnecting… Ns" (game peeche dikhti rehti hai,
         // isi bar-jaise banner ke sath). Server apni taraf se pending player ki
         // turn khud auto-play karta rehta hai isi dauran. ----
         val connectionLost by state.connectionLost
@@ -514,7 +548,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
             }
         }
 
-        // 30 second guzar gaye aur wapis connect nahi hua — Exit/Connect popup
+        // Grace window guzar gayi aur wapis connect nahi hua — Exit/Connect popup
         val showReconnectChoice by state.showReconnectChoice
         if (showReconnectChoice) {
             AlertDialog(
@@ -523,7 +557,7 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                     AsyncImage(model = NO_CONNECTION_ICON, contentDescription = "no connection", modifier = Modifier.size(36.dp))
                 },
                 title = { Text("Connection chali gayi", fontWeight = FontWeight.Black) },
-                text = { Text("30 second tak reconnect nahi ho saka. Dobara try karein ya game chhod dein?") },
+                text = { Text("$RECONNECT_GRACE_SECONDS second tak reconnect nahi ho saka. Dobara try karein ya game chhod dein?") },
                 confirmButton = {
                     TextButton(onClick = { state.retryConnect() }) { Text("Connect") }
                 },

@@ -31,6 +31,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+import com.voiceludo.app.net.SessionStore
 
 // Asal HTML (#yallaHome) ka poora lobby screen — topbar (avatar/coins/gems/shop/settings),
 // league-rank locked cards, mode grid (2&4 Players / Team), bottom nav (Events/Battle/Chat/Social).
@@ -165,6 +166,7 @@ private fun SettingsDialog(onDismiss: () -> Unit, onLoggedOut: () -> Unit) {
             Button(
                 onClick = {
                     AccountStore.clearSession(context)
+                    SessionStore.clear(context)
                     onLoggedOut()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFcc3333))

@@ -6,6 +6,8 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -44,8 +46,12 @@ import com.voiceludo.app.ui.voiceparty.SetPasswordScreen
 import com.voiceludo.app.ui.voiceparty.YallaHomeScreen
 import com.voiceludo.app.ui.voiceparty.ProfileEditScreen
 import com.voiceludo.app.ui.voiceparty.AccountStore
+import com.voiceludo.app.ui.voiceparty.SplashAutoLoginScreen
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+import com.voiceludo.app.net.SessionStore
+import com.voiceludo.app.net.NetworkMonitor
+import com.voiceludo.app.ui.common.ConnectionStatusOverlay
 
 // Poori app ka navigation graph — Voice Party (login/home) aur Ludo (mode-select/game)
 // dono yahan se navigate hote hain, sab kuch native Kotlin/Compose mein.
@@ -108,6 +114,27 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val context = LocalContext.current
 
+                    // Phone ka internet on/off track karna shuru — ek hi dafa (poori app
+                    // ke liye), taake ConnectionStatusOverlay sab screens par kaam kare.
+                    // WebSocket connection bhi yahin se turant shuru kar dete hain (pehle
+                    // sirf login button dabane par connect hota tha) — warna saved-session
+                    // wale users ke liye SplashAutoLoginScreen ka "connState == CONNECTED"
+                    // wala intezaar kabhi poora hi na hota, aur "loading..." par hamesha
+                    // atki reh jati.
+                    DisposableEffect(Unit) {
+                        NetworkMonitor.start(context)
+                        BackendClient.ensureConnected()
+                        onDispose {}
+                    }
+
+                    // Pehle se saved session (auth_token) mile to "vp_splash" se shuru
+                    // karte hain (jo khud-b-khud login try karti hai) — warna seedha
+                    // "vp_main" (login/signup choose karne wali screen). Isi se woh purana
+                    // bug fix hota hai: "1 dafa login karne ke baad app band/on karne par
+                    // dobara signup maanga jata tha" — pehle koi bhi saved session check
+                    // hi nahi hoti thi.
+                    val startDestination = remember { if (SessionStore.hasSession(context)) "vp_splash" else "vp_main" }
+
                     // 1 ID = 1 device — bekend ne yeh connection "forceLogout" kar diya
                     // (matlab yehi account kisi doosre phone/device par login/signup ho
                     // gaya hai). Yahan poori app ke liye ek hi global listener hai
@@ -131,6 +158,7 @@ class MainActivity : ComponentActivity() {
                             confirmButton = {
                                 TextButton(onClick = {
                                     AccountStore.clearSession(context)
+                                    SessionStore.clear(context)
                                     forceLogoutMsg = null
                                     navController.navigate("vp_main") { popUpTo(0) }
                                 }) { Text("OK") }
@@ -138,41 +166,48 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    NavHost(navController = navController, startDestination = "vp_main") {
-                        composable("vp_main") { VoicePartyMainScreen(navController) }
-                        composable("vp_mobile_login") { MobileLoginScreen(navController) }
-                        composable("vp_facebook_login") { FacebookLoginScreen(navController) }
-                        composable("vp_gmail_login") { GmailLoginScreen(navController) }
-                        composable("vp_gmail_signup") { GmailSignupScreen(navController) }
-                        composable("vp_forgot_password") { ForgotPasswordScreen(navController) }
-                        composable(
-                            "vp_set_password/{method}/{contact}",
-                            arguments = listOf(
-                                navArgument("method") { type = NavType.StringType },
-                                navArgument("contact") { type = NavType.StringType }
-                            )
-                        ) { backStackEntry ->
-                            val method = backStackEntry.arguments?.getString("method") ?: "gmail"
-                            val contact = backStackEntry.arguments?.getString("contact") ?: ""
-                            SetPasswordScreen(navController, method = method, contact = contact)
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        NavHost(navController = navController, startDestination = startDestination) {
+                            composable("vp_splash") { SplashAutoLoginScreen(navController) }
+                            composable("vp_main") { VoicePartyMainScreen(navController) }
+                            composable("vp_mobile_login") { MobileLoginScreen(navController) }
+                            composable("vp_facebook_login") { FacebookLoginScreen(navController) }
+                            composable("vp_gmail_login") { GmailLoginScreen(navController) }
+                            composable("vp_gmail_signup") { GmailSignupScreen(navController) }
+                            composable("vp_forgot_password") { ForgotPasswordScreen(navController) }
+                            composable(
+                                "vp_set_password/{method}/{contact}",
+                                arguments = listOf(
+                                    navArgument("method") { type = NavType.StringType },
+                                    navArgument("contact") { type = NavType.StringType }
+                                )
+                            ) { backStackEntry ->
+                                val method = backStackEntry.arguments?.getString("method") ?: "gmail"
+                                val contact = backStackEntry.arguments?.getString("contact") ?: ""
+                                SetPasswordScreen(navController, method = method, contact = contact)
+                            }
+                            composable("vp_home") { YallaHomeScreen(navController) }
+                            composable("vp_profile_edit") { ProfileEditScreen(navController) }
+                            composable("ludo_mode_select") { LudoModeSelectScreen(navController) }
+                            composable("ludo_matching/{mode}/{players}/{magic}/{betIndex}") { backStackEntry ->
+                                val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
+                                val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4
+                                val magic = backStackEntry.arguments?.getString("magic")?.toBooleanStrictOrNull() ?: false
+                                val betIndex = backStackEntry.arguments?.getString("betIndex")?.toIntOrNull() ?: 0
+                                LudoMatchingScreen(navController, mode = mode, players = players, magic = magic, betIndex = betIndex)
+                            }
+                            composable("ludo_game/{mode}/{players}/{magic}/{betIndex}") { backStackEntry ->
+                                val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
+                                val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4
+                                val magic = backStackEntry.arguments?.getString("magic")?.toBooleanStrictOrNull() ?: false
+                                val betIndex = backStackEntry.arguments?.getString("betIndex")?.toIntOrNull() ?: 0
+                                LudoGameScreen(navController, mode = mode, players = players, magic = magic, betIndex = betIndex)
+                            }
                         }
-                        composable("vp_home") { YallaHomeScreen(navController) }
-                        composable("vp_profile_edit") { ProfileEditScreen(navController) }
-                        composable("ludo_mode_select") { LudoModeSelectScreen(navController) }
-                        composable("ludo_matching/{mode}/{players}/{magic}/{betIndex}") { backStackEntry ->
-                            val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
-                            val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4
-                            val magic = backStackEntry.arguments?.getString("magic")?.toBooleanStrictOrNull() ?: false
-                            val betIndex = backStackEntry.arguments?.getString("betIndex")?.toIntOrNull() ?: 0
-                            LudoMatchingScreen(navController, mode = mode, players = players, magic = magic, betIndex = betIndex)
-                        }
-                        composable("ludo_game/{mode}/{players}/{magic}/{betIndex}") { backStackEntry ->
-                            val mode = backStackEntry.arguments?.getString("mode") ?: "classic"
-                            val players = backStackEntry.arguments?.getString("players")?.toIntOrNull() ?: 4
-                            val magic = backStackEntry.arguments?.getString("magic")?.toBooleanStrictOrNull() ?: false
-                            val betIndex = backStackEntry.arguments?.getString("betIndex")?.toIntOrNull() ?: 0
-                            LudoGameScreen(navController, mode = mode, players = players, magic = magic, betIndex = betIndex)
-                        }
+
+                        // Poori app ke upar (har route ke upar) — internet/server connection
+                        // chali jaye to sabse pehle yeh nazar aata hai.
+                        ConnectionStatusOverlay(modifier = Modifier.align(Alignment.TopCenter))
                     }
                 }
             }

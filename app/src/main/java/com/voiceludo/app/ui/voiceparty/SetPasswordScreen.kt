@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+import com.voiceludo.app.net.SessionStore
+import com.voiceludo.app.ui.common.LoadingOverlay
 
 // Same jungle/moon background jo baaki saari screens (Login, Sign Up, Home) mein use hoti hai
 private const val JUNGLE_MOON_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
@@ -51,6 +53,7 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
                 is ServerMessage.Auth -> {
                     loading = false
                     AccountStore.saveSession(context, "gmail", contact)
+                    SessionStore.save(context, msg.playerId, msg.authToken, msg.name, msg.avatar, msg.coins, msg.diamonds)
                     createdId = msg.playerId
                 }
                 is ServerMessage.Err -> {
@@ -190,6 +193,10 @@ fun SetPasswordScreen(navController: NavController, method: String, contact: Str
                     }
                 }
             }
+        }
+
+        if (loading) {
+            LoadingOverlay("Account ban raha hai...")
         }
     }
 }

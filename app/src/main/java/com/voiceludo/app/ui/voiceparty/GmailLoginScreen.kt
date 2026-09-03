@@ -20,6 +20,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+import com.voiceludo.app.net.SessionStore
+import com.voiceludo.app.ui.common.LoadingOverlay
 import com.voiceludo.app.ui.ludo.NO_CONNECTION_ICON
 import kotlinx.coroutines.delay
 
@@ -80,6 +82,7 @@ fun GmailLoginScreen(navController: NavController) {
                     loading = false
                     connectionLost = false
                     AccountStore.saveSession(context, "gmail", email)
+                    SessionStore.save(context, msg.playerId, msg.authToken, msg.name, msg.avatar, msg.coins, msg.diamonds)
                     navController.navigate("vp_home")
                 }
                 is ServerMessage.Err -> {
@@ -221,6 +224,12 @@ fun GmailLoginScreen(navController: NavController) {
                     onRight = { navController.navigate("vp_gmail_signup") }
                 )
             }
+        }
+
+        // Jab tak bekend se jawab (Auth ya error) na aa jaye, poori screen block —
+        // aage nahi badh sakte, dobara button bhi nahi daba sakte.
+        if (loading) {
+            LoadingOverlay("Login ho raha hai...")
         }
     }
 }

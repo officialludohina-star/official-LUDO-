@@ -25,21 +25,20 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
-import com.voiceludo.app.net.EmailService
 import com.voiceludo.app.net.ServerMessage
-import com.voiceludo.app.net.SessionStore
-import com.voiceludo.app.ui.common.LoadingOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val JUNGLE_MOON_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
 
-// "Forgot Password?" ka asal, kaam karne wala flow — GmailSignupScreen jaisa
-// hi real EmailJS OTP use karta hai (koi fake bypass nahi), aur verify hone
-// ke baad naya password seedha REAL bekend (BackendClient.resetPassword) par
-// set hota hai. Reset hote hi bekend "auth" bhi bhej deta hai — is se user
-// turant logged-in ho kar seedha home par chala jata hai, dobara login karne
-// ki zaroorat nahi.
+// "Forgot Password?" ka asal, kaam karne wala flow. OTP ab poori tarah SERVER
+// (bekend) generate + verify karta hai — app sirf "requestPasswordReset" bhej
+// kar OTP mangwati hai, aur user ka daala hua code seedha "resetPassword" call
+// ke sath bekend ko bhej deti hai. (Pehle app khud OTP bana kar khud verify
+// kar leti thi — is se koi bhi bina email dekhe, seedha bekend ko message bhej
+// kar kisi ka bhi password badal sakta tha; ab yeh gap band ho chuka hai.)
+// Reset hote hi bekend "auth" bhi bhej deta hai — is se user turant logged-in
+// ho kar seedha home par chala jata hai, dobara login karne ki zaroorat nahi.
 @Composable
 fun ForgotPasswordScreen(navController: NavController) {
     val context = LocalContext.current
@@ -66,12 +65,21 @@ fun ForgotPasswordScreen(navController: NavController) {
                 is ServerMessage.Auth -> {
                     loading = false
                     AccountStore.saveSession(context, "gmail", email)
-                    SessionStore.save(context, msg.playerId, msg.authToken, msg.name, msg.avatar, msg.coins, msg.diamonds)
                     done = true
+                }
+                is ServerMessage.OtpSent -> {
+                    sendingEmail = false
+                    otpSent = true
+                    secondsLeft = 60
+                    scope.launch {
+                        while (secondsLeft > 0) { delay(1000); secondsLeft-- }
+                    }
                 }
                 is ServerMessage.Err -> {
                     loading = false
+                    sendingEmail = false
                     errorText = msg.message
+                    if (step == 2) step = 1 // OTP ghalat/expire nikla — naya code mangwaane ke liye wapis
                 }
                 is ServerMessage.ConnectionClosed -> {
                     if (loading) {
@@ -147,18 +155,7 @@ fun ForgotPasswordScreen(navController: NavController) {
                                     } else if (!sendingEmail) {
                                         sendingEmail = true
                                         errorText = ""
-                                        val otp = AccountStore.generateOtp()
-                                        EmailService.sendOtp(email, otp) { success ->
-                                            sendingEmail = false
-                                            otpSent = true
-                                            secondsLeft = 60
-                                            if (!success) {
-                                                errorText = "Email bhejne mein masla hua — dobara try karein."
-                                            }
-                                            scope.launch {
-                                                while (secondsLeft > 0) { delay(1000); secondsLeft-- }
-                                            }
-                                        }
+                                        BackendClient.requestPasswordReset(email)
                                     }
                                 },
                                 enabled = !sendingEmail,
@@ -207,8 +204,8 @@ fun ForgotPasswordScreen(navController: NavController) {
                         onClick = {
                             when {
                                 email.isBlank() -> errorText = "Please enter your email address."
-                                !AccountStore.verifyOtp(code) -> errorText = "Incorrect verification code. Please try again."
-                                else -> { errorText = ""; step = 2 }
+                                code.isBlank() -> errorText = "Please enter the verification code."
+                                else -> { errorText = ""; step = 2 } // asal check ab resetPassword call par server par hoti hai
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0a7a42)),
@@ -261,7 +258,7 @@ fun ForgotPasswordScreen(navController: NavController) {
                                 else -> {
                                     loading = true
                                     errorText = ""
-                                    BackendClient.resetPassword(email, newPass)
+                                    BackendClient.resetPassword(email, newPass, code)
                                 }
                             }
                         },
@@ -278,10 +275,6 @@ fun ForgotPasswordScreen(navController: NavController) {
                     }
                 }
             }
-        }
-
-        if (loading) {
-            LoadingOverlay(if (step == 1) "Code bheja ja raha hai..." else "Password reset ho raha hai...")
         }
     }
 }

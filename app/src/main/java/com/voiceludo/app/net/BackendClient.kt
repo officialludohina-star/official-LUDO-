@@ -126,6 +126,11 @@ sealed class ServerMessage {
 
 typealias ServerListener = (ServerMessage) -> Unit
 
+// ConnState — poori app (ConnectionStatusOverlay, SplashAutoLoginScreen) isay
+// dekh kar decide karti hai ke "internet nahi hai" vs "internet hai lekin
+// hamare game-server tak nahi pohanch rahe" mein farak dikhana hai.
+enum class ConnState { CONNECTING, CONNECTED, DISCONNECTED }
+
 object BackendClient {
 
     private val client = OkHttpClient.Builder()
@@ -134,6 +139,9 @@ object BackendClient {
 
     private var socket: WebSocket? = null
     private val listeners = CopyOnWriteArrayList<ServerListener>()
+
+    private val _state = kotlinx.coroutines.flow.MutableStateFlow(ConnState.DISCONNECTED)
+    val state: kotlinx.coroutines.flow.StateFlow<ConnState> = _state
     // Signup/login ke baad connect hone se pehle bheji gayi cheezein isi queue
     // mein rehti hain, socket open hote hi flush ho jati hain.
     private val pending = mutableListOf<JSONObject>()
@@ -186,20 +194,32 @@ object BackendClient {
 
     fun ensureConnected() {
         if (socket != null) return
+        _state.value = ConnState.CONNECTING
         val request = Request.Builder().url(WS_URL).build()
         socket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                // Agar hum kisi active game ke beech mein thay (net drop se pehle),
-                // to sab se pehle purana session "resume" kar lete hain — koi
-                // dobara login/signup nahi maangta, seedha wahi room/state wapis
-                // mil jati hai. Yeh signup/login se bhi pehle jata hai.
+                _state.value = ConnState.CONNECTED
+                authed = false
+                // Har (re)connection par bekend ek NAYA connection object samajhta hai —
+                // is par khud-b-khud authenticated nahi hota, chahe hamare paas pehle se
+                // valid auth_token kyun na ho. Pehle sirf mid-game "resume" hota tha, is
+                // liye agar connection kisi aur waqt (game ke bahar, jaise matching screen
+                // par jaane se pehle) reconnect hoti to naya connection UN-authenticated
+                // reh jata aur agli request (jaise "join") par "pehle signup ya login
+                // karein" error aata — chahe user asal mein login hi kyun na ho. Ab agar
+                // active game hai to "resume", warna (per session token maujood ho to)
+                // "loginWithToken" — dono cases mein naya connection turant re-authenticate
+                // ho jata hai. Baaki koi bhi queued message (jaise "join") send()'s
+                // authed-gate ki wajah se yahan turant nahi jata — "auth" mil te hi
+                // flushPending() khud bhej degi.
                 val token = authToken
-                if (inGame && token != null) {
-                    webSocket.send(JSONObject().put("type", "resume").put("auth_token", token).toString())
-                }
-                synchronized(pending) {
-                    pending.forEach { webSocket.send(it.toString()) }
-                    pending.clear()
+                if (token != null) {
+                    val type = if (inGame) "resume" else "loginWithToken"
+                    webSocket.send(JSONObject().put("type", type).put("auth_token", token).toString())
+                } else {
+                    // Koi saved token hi nahi — matlab login/signup screen khud
+                    // "login"/"signup" bhejegi (dono bootstrap types hain, seedha
+                    // ja sakti hain), baaki kuch bhejne ki zaroorat nahi.
                 }
                 notify(ServerMessage.ConnectionOpened)
             }
@@ -211,23 +231,45 @@ object BackendClient {
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.e("BackendClient", "ws failure: ${t.message}")
                 socket = null
+                _state.value = ConnState.DISCONNECTED
                 notify(ServerMessage.ConnectionClosed(t.message ?: "connection failed"))
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 socket = null
+                _state.value = ConnState.DISCONNECTED
                 notify(ServerMessage.ConnectionClosed(reason))
             }
         })
     }
 
+    // authed — true sirf jab is (current) connection par "auth" mil chuka ho.
+    // Naya connection open hote hi false ho jata hai jab tak resume/loginWithToken
+    // ka jawab na aa jaye — is dauran koi bhi doosra message (jaise "join")
+    // bheja gaya to seedha nahi jata, balke isi tarah queue ho jata hai jaise
+    // socket band ho — taake kabhi bhi "pehle signup ya login karein" na aaye
+    // jab user asal mein login hi ho.
+    @Volatile private var authed = false
+    private val authBootstrapTypes = setOf("login", "signup", "resume", "loginWithToken", "resetPassword", "requestPasswordReset")
+
     private fun send(obj: JSONObject) {
         ensureConnected()
         val ws = socket
-        if (ws == null) {
+        val type = obj.optString("type")
+        if (ws == null || (!authed && type !in authBootstrapTypes)) {
             synchronized(pending) { pending.add(obj) }
         } else {
             ws.send(obj.toString())
+        }
+    }
+
+    // Auth confirm hote hi (parse() ke "auth" case se) jo bhi is dauran queue
+    // hui thi (jaise "join"), ab bhej dete hain.
+    private fun flushPending() {
+        val ws = socket ?: return
+        synchronized(pending) {
+            pending.forEach { ws.send(it.toString()) }
+            pending.clear()
         }
     }
 
@@ -284,6 +326,35 @@ object BackendClient {
         socket?.cancel()
         socket = null
         ensureConnected()
+    }
+
+    // autoLogin() — app khulte hi (koi active game nahi, sirf pehle se saved
+    // session token) khud-b-khud login karta hai. "resume" se alag hai (wo
+    // sirf mid-game disconnect ke liye kaam karta hai) — bekend par isi ke
+    // liye naya "loginWithToken" message type hai. Callback ek hi dafa,
+    // Auth ya Err milte hi, chalta hai.
+    fun autoLogin(authToken: String, onResult: (success: Boolean, message: String?) -> Unit) {
+        var responded = false
+        lateinit var listener: ServerListener
+        listener = { msg ->
+            if (!responded) {
+                when (msg) {
+                    is ServerMessage.Auth -> { responded = true; removeListener(listener); onResult(true, null) }
+                    is ServerMessage.Err -> { responded = true; removeListener(listener); onResult(false, msg.message) }
+                    is ServerMessage.ConnectionClosed -> {
+                        // connect hi na ho saka — timeout se pehle hi bata dete hain
+                        responded = true; removeListener(listener); onResult(false, msg.reason)
+                    }
+                    else -> {}
+                }
+            }
+        }
+        addListener(listener)
+        send(JSONObject().put("type", "loginWithToken").put("auth_token", authToken))
+        // Safety-net — server kabhi jawab hi na de to hamesha ke liye latka na rahe.
+        mainHandler.postDelayed({
+            if (!responded) { responded = true; removeListener(listener); onResult(false, "timeout") }
+        }, 10000)
     }
 
     // Naam/avatar badalne ke liye — avatar hamesha pehle uploadAvatar() se mile
@@ -422,6 +493,8 @@ object BackendClient {
                     diamonds = obj.optLong("diamonds")
                     myName = obj.optString("name")
                     myAvatar = obj.optString("avatar")
+                    authed = true
+                    flushPending()
                     ServerMessage.Auth(playerId!!, authToken!!, coins, diamonds, myName, myAvatar)
                 }
                 "error" -> ServerMessage.Err(obj.optString("message"))
@@ -448,6 +521,8 @@ object BackendClient {
                     if (obj.has("diamonds")) diamonds = obj.optLong("diamonds")
                     val snap = parseSnapshot(obj.optJSONObject("state")) ?: return null
                     inGame = true
+                    authed = true
+                    flushPending()
                     ServerMessage.Resumed(
                         roomId = obj.optString("room_id"),
                         color = obj.optString("color"),
@@ -492,6 +567,7 @@ object BackendClient {
                     playerId = null
                     authToken = null
                     inGame = false
+                    authed = false
                     ServerMessage.ForceLogout(obj.optString("message"))
                 }
                 else -> null

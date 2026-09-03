@@ -57,6 +57,10 @@ class LudoGameState(
 
     var gameOver = mutableStateOf(false)
     var winnerText = mutableStateOf("")
+    // Raw winner color (winnerText jaisa formatted string nahi) — LudoGameScreen
+    // isay profiles + matched.bet ke sath mila kar poora winner/loser result
+    // screen banata hai (naam + jeeti hui bet amount ke sath).
+    var winnerColor = mutableStateOf<LudoColor?>(null)
 
     var savedRolls = mutableStateListOf<Int>()
     var rollChoice = mutableStateOf<RollChoice?>(null)
@@ -74,14 +78,18 @@ class LudoGameState(
     // rehti hai (0 = us player ke liye is game mein lock ho chuka).
     val extraRollNextCost = mutableStateMapOf<LudoColor, Long>()
 
-    // ---- Net/connection drop UI: "Reconnecting…" overlay 30-second countdown se
-    // shuru hoti hai. Agar 30 second guzar jayen aur wapis connect na ho, to
-    // "Exit / Connect" popup dikhta hai — Exit game chhod deta hai (forfeit),
-    // Connect dobara try karta hai (naya 30-second window). Asal enforcement
-    // (kab tak reconnect allowed hai) hamesha bekend par hoti hai — yeh sirf
-    // display/local retry-trigger hai. ----
+    // ---- Net/connection drop UI: "Reconnecting…" overlay RECONNECT_GRACE_SECONDS
+    // (bekend ke ReconnectGraceSeconds se match) countdown se shuru hoti hai.
+    // Agar itne second guzar jayen aur wapis connect na ho, to "Exit / Connect"
+    // popup dikhta hai — Exit game chhod deta hai (forfeit), Connect dobara try
+    // karta hai (naya window). Asal enforcement (kab tak reconnect allowed hai)
+    // hamesha bekend par hoti hai — yeh sirf display/local retry-trigger hai.
+    // (Pehle yahan hardcoded 30 tha jabke bekend ka asal window 60 second hai —
+    // is se "time khatam" popup waqt se pehle dikh jata tha aur user ghalti se
+    // Exit dabakar bet haar sakta tha jabke server abhi bhi wapis aane ka
+    // intezaar kar raha hota.) ----
     var connectionLost = mutableStateOf(false)
-    var reconnectSecondsLeft = mutableStateOf(30)
+    var reconnectSecondsLeft = mutableStateOf(RECONNECT_GRACE_SECONDS)
     var showReconnectChoice = mutableStateOf(false)
     private var reconnectJob: kotlinx.coroutines.Job? = null
 
@@ -95,7 +103,7 @@ class LudoGameState(
     private fun startReconnectCountdown() {
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
-            for (s in 30 downTo 1) {
+            for (s in RECONNECT_GRACE_SECONDS downTo 1) {
                 reconnectSecondsLeft.value = s
                 // Har ~4 second mein khud hi reconnect try karte rehte hain (sirf
                 // countdown dikhana kaafi nahi, asal koshish bhi honi chahiye) —
@@ -115,10 +123,10 @@ class LudoGameState(
         reconnectJob?.cancel()
         connectionLost.value = false
         showReconnectChoice.value = false
-        reconnectSecondsLeft.value = 30
+        reconnectSecondsLeft.value = RECONNECT_GRACE_SECONDS
     }
 
-    // "Connect" button — network dobara check karke ek aur 30-second window try karo
+    // "Connect" button — network dobara check karke ek aur poora window try karo
     fun retryConnect() {
         showReconnectChoice.value = false
         BackendClient.reconnect()
@@ -187,11 +195,11 @@ class LudoGameState(
                 "dice" -> {
                     val c = e.color?.let { runCatching { LudoColor.valueOf(it) }.getOrNull() } ?: continue
                     isRolling.value = true
-                    delay(700)
+                    delay(950)
                     isRolling.value = false
                     diceByColor[c] = e.value
                     diceRolled.value = true
-                    delay(300)
+                    delay(350)
                 }
                 "rollAgain" -> {
                     // Informational — savedRolls chain snapshot se hi sync ho jayegi
@@ -215,8 +223,9 @@ class LudoGameState(
                 "gameOver" -> {
                     gameOver.value = true
                     turnTimerColor.value = null
-                    val winnerColor = e.winner?.let { runCatching { LudoColor.valueOf(it) }.getOrNull() }
-                    winnerText.value = if (winnerColor != null) "$winnerColor JEET GAYA! \uD83C\uDFC6" else "Game khatam"
+                    val winnerC = e.winner?.let { runCatching { LudoColor.valueOf(it) }.getOrNull() }
+                    winnerColor.value = winnerC
+                    winnerText.value = if (winnerC != null) "$winnerC JEET GAYA! \uD83C\uDFC6" else "Game khatam"
                 }
             }
         }
@@ -233,6 +242,22 @@ class LudoGameState(
         if (e.from == -1) {
             t[e.tokenIndex] = 0
             delay(230)
+        } else if (e.arrowJumped) {
+            // Arrow-jump: pehle chand cells tak normal chal ke dikhao, phir jo
+            // baaki (arrow ka shortcut) hissa hai use ek hi jhatke mein "warp"
+            // karo. Pehle poori e.from..e.to range har cell se guzarti thi —
+            // arrow ke bade jump (jaise edge-arrow seedha home-stretch ke
+            // paas) ke liye yeh bohot lamba/ajeeb crawl ban jata tha.
+            val walkSteps = (e.to - e.from).coerceAtMost(3)
+            var pos = e.from
+            repeat(walkSteps) {
+                pos += 1
+                t[e.tokenIndex] = pos
+                delay(150)
+            }
+            delay(120)
+            t[e.tokenIndex] = e.to // arrow ka shortcut hissa — seedha warp
+            delay(180)
         } else {
             var pos = e.from
             while (pos < e.to) {
@@ -282,6 +307,8 @@ class LudoGameState(
 
         gameOver.value = snap.gameOver
         if (snap.gameOver && snap.winner != null && winnerText.value.isEmpty()) {
+            val winnerC = runCatching { LudoColor.valueOf(snap.winner) }.getOrNull()
+            winnerColor.value = winnerC
             winnerText.value = "${snap.winner} JEET GAYA! \uD83C\uDFC6"
         }
 

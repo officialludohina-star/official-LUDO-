@@ -1,15 +1,26 @@
 package com.voiceludo.app.ui.ludo
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -112,24 +123,27 @@ fun LudoMatchingScreen(
             modifier = Modifier.fillMaxSize().padding(top = 34.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Matching/searching gif — jab tak asal opponent bekend se nahi mil jata
-            // (ServerMessage.Matched aane tak) yeh chalti rehti hai. Connection hi
-            // toot jaye to isi jagah NO_CONNECTION_ICON dikhata hai (baar-baar retry
-            // ke sath, jab tak wapis connect na ho jaye).
-            AsyncImage(
-                model = if (connectionLost) NO_CONNECTION_ICON else MATCHING_SEARCH_GIF,
-                contentDescription = if (connectionLost) "no connection" else "searching",
-                modifier = Modifier.size(90.dp)
-            )
-            Spacer(Modifier.height(10.dp))
+            // Upar koi bara "searching" gif/text nahi dikhate — searching-animation
+            // ab seedha "Player" (opponent) slot ke andar dikhti hai (neeche
+            // MatchPlayerSlot mein), taake ek hi cheez do jagah repeat na ho.
+            // Sirf connection-drop ek alag/zaroori state hai isliye usay yahan
+            // top par chhota banner ki tarah dikhate hain.
             if (connectionLost) {
+                Icon(
+                    Icons.Filled.WifiOff,
+                    contentDescription = "no connection",
+                    tint = Color(0xFFff6b6b),
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(Modifier.height(10.dp))
                 Text(
                     "Connection nahi hai — reconnect ki koshish ja rahi hai...",
                     color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
+                Spacer(Modifier.height(20.dp))
             }
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(10.dp))
 
             // Entry coins + total pool
             Row(
@@ -241,12 +255,26 @@ private fun MatchPlayerSlot(name: String, avatarUrl: String?, isSearching: Boole
             contentAlignment = Alignment.Center
         ) {
             if (isSearching) {
-                // Koi aur player dhoondte hue is slot mein wahi searching-gif chalti
-                // hai jo screen ke oopar bhi chal rahi hai — static spinner ki jagah.
+                // Koi aur player dhoondte hue is "Player" slot ke andar hi ghoomta
+                // hua loader dikhta hai — silhouette ke upar overlay ki tarah,
+                // taake pata chale ke yahan abhi koi opponent dhoonda ja raha hai.
                 AsyncImage(
-                    model = MATCHING_SEARCH_GIF,
-                    contentDescription = "dhoondh rahe hain",
-                    modifier = Modifier.size(60.dp)
+                    model = DEFAULT_AVATAR_IMG,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+                )
+                val infiniteTransition = rememberInfiniteTransition(label = "searching")
+                val angle by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart),
+                    label = "searchingAngle"
+                )
+                CircularProgressIndicator(
+                    modifier = Modifier.fillMaxSize().rotate(angle),
+                    color = Color(0xFFffd93b),
+                    strokeWidth = 3.dp
                 )
             } else {
                 AsyncImage(

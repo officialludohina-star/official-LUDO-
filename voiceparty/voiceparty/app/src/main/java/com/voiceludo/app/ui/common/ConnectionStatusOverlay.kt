@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -19,13 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ConnState
 import com.voiceludo.app.net.NetworkMonitor
-
-// User ne is connection-status banner ke liye khaas yehi icon diya tha.
-private const val NO_CONNECTION_ICON = "https://i.postimg.cc/kggkYCRb/IMG-20260902-WA0005.jpg"
 
 // ============================================================================
 // Poori app ke upar (har screen par, MainActivity se) yeh chhota banner dikhata
@@ -41,9 +36,9 @@ fun ConnectionStatusOverlay(modifier: Modifier = Modifier) {
 
     val show = !hasInternet || connState != ConnState.CONNECTED
     val message = when {
-        !hasInternet -> "Internet nahi hai — connection check karein"
-        connState == ConnState.CONNECTING -> "Server se connect ho raha hai..."
-        else -> "Server se connection nahi hai"
+        !hasInternet -> "\u26A0 Internet nahi hai — connection check karein"
+        connState == ConnState.CONNECTING -> "\u26A0 Server se connect ho raha hai..."
+        else -> "\u26A0 Server se connection nahi hai"
     }
 
     AnimatedVisibility(visible = show, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
@@ -55,8 +50,6 @@ fun ConnectionStatusOverlay(modifier: Modifier = Modifier) {
                 .background(Color(0xFFcc2b2b))
                 .padding(vertical = 8.dp, horizontal = 12.dp)
         ) {
-            AsyncImage(model = NO_CONNECTION_ICON, contentDescription = "no connection", modifier = Modifier.size(20.dp))
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(start = 6.dp))
             Text(message, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }

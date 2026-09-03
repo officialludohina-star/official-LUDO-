@@ -150,7 +150,6 @@ private fun BoxTokenWithGlow(
     animX: Dp,
     animY: Dp,
     isMovable: Boolean,
-    isCurrentTurn: Boolean,
     tokenColor: LudoColor,
     imageUrl: String?,
     contentDescription: String,
@@ -215,18 +214,6 @@ private fun BoxTokenWithGlow(
                         ),
                         CircleShape
                     )
-            )
-        } else if (isCurrentTurn) {
-            // Yeh device khud is token ko chala nahi sakta (kisi aur ki bari hai)
-            // lekin sabko yeh pata chalna chahiye ke abhi kis ki bari hai — isliye
-            // sirf ek simple, static outline ring (token ka apna color, halka bounce
-            // ke bagair) — token ki fill/color kabhi nahi badalti, sirf uske gird
-            // ek gol daira nazar aata hai.
-            val (ringColor, _) = MOVABLE_GLOW.getValue(tokenColor)
-            Box(
-                modifier = Modifier
-                    .size(tokenSizeDp * 1.35f)
-                    .border(2.dp, ringColor.copy(alpha = 0.85f), CircleShape)
             )
         }
         AsyncImage(
@@ -427,10 +414,9 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                 val targetY = centerY - tokenSizeDp / 2
 
                 val isMovable = t.color == state.currentColor &&
-                    state.currentColor == state.myColor &&
+                    state.currentIdx.value == 0 &&
                     !state.isMoving.value &&
                     t.idx in state.movable
-                val isCurrentTurn = t.color == state.currentColor
 
                 // key(color, idx) — token ki asal "identity" (color+idx) se bandha hua
                 // animation-state, iske bagair jab tokens yard se nikalte ya kisi cell
@@ -446,7 +432,6 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                         animX = animX,
                         animY = animY,
                         isMovable = isMovable,
-                        isCurrentTurn = isCurrentTurn,
                         tokenColor = t.color,
                         imageUrl = TOKEN_IMG[t.color],
                         contentDescription = "${t.color} token ${t.idx}",
@@ -471,7 +456,7 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                 val targetY = centerY - tokenSizeDp / 2
 
                 val isMovable = color == state.currentColor &&
-                    state.currentColor == state.myColor &&
+                    state.currentIdx.value == 0 &&
                     !state.isMoving.value &&
                     i in state.movable
 
@@ -484,7 +469,6 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                         animX = animX,
                         animY = animY,
                         isMovable = isMovable,
-                        isCurrentTurn = isMovable,
                         tokenColor = color,
                         imageUrl = TOKEN_IMG[color],
                         contentDescription = "$color token $i",
@@ -495,16 +479,14 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
         }
 
         // ---- Capture flash overlays ----
-        // Jab koi token kill kare: happy icon attacker (killer) ke upar 2 sec
-        // Jab token kill ho kar ghar jaye: rota hua icon usi cell par 2 sec
-        // NOTE: pehle yeh ulta tha (crying killer par, happy killed par) — user
-        // ke bataye anusar theek kiya gaya hai.
-        val happyIcon = "https://i.postimg.cc/vZTDxWkg/img8-static.png"
-        val cryingIcon = "https://i.postimg.cc/T335q8LT/horse-chat.webp"
+        // Jab koi token kill kare: horse-chat icon (attacker ke upar) 2 sec
+        // Jab token kill ho kar ghar jaye: img8-static icon (usi cell par) 2 sec
+        val horseIcon = "https://i.postimg.cc/T335q8LT/horse-chat.webp"
+        val homeIcon  = "https://i.postimg.cc/vZTDxWkg/img8-static.png"
 
         listOf(
-            state.killerFlashPos.value to happyIcon,
-            state.killedFlashPos.value to cryingIcon
+            state.killerFlashPos.value to horseIcon,
+            state.killedFlashPos.value to homeIcon
         ).forEach { (globalPos, iconUrl) ->
             if (globalPos != null && globalPos in RING.indices) {
                 val rc = RING[globalPos]

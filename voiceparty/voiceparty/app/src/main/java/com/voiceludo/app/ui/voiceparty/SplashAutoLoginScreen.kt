@@ -38,12 +38,7 @@ fun SplashAutoLoginScreen(navController: NavController) {
     LaunchedEffect(connState) {
         if (connState == ConnState.CONNECTED && !attempted) {
             attempted = true
-            val token = SessionStore.getToken(context)
-            if (token == null) {
-                navController.navigate("vp_main") { popUpTo("vp_splash") { inclusive = true } }
-                return@LaunchedEffect
-            }
-            BackendClient.autoLogin(token) { success, _ ->
+            BackendClient.autoLogin { success, _ ->
                 if (success) {
                     navController.navigate("vp_home") {
                         popUpTo("vp_splash") { inclusive = true }
