@@ -99,7 +99,16 @@ fun ProfileEditScreen(navController: NavController) {
     // ko bhi sync kar dete hain — kabhi bhi local file path avatar ke taur par
     // nahi bhejte, sirf pehle se hosted http(s) URL (upload hone ke baad).
     fun pushProfileToBackend(currentProfile: UserProfile) {
-        val avatarForBackend = currentProfile.avatarUri.takeIf { it.startsWith("http") } ?: ""
+        // BUG FIX: pehle yahan avatar na hone par khali string "" bekend ko bhej
+        // dete thay — bekend ka UpdateProfile hamesha avatar column overwrite
+        // karta hai, chahe khali kyun na ho, isliye jab bhi sirf naam edit hota
+        // (avatar edit nahi) ya app dobara khulte hi is device par avatarUri abhi
+        // http URL na bana ho, to yeh pehle se saved DP ko database mein permanently
+        // mita deta tha — logout/login ya app on-off ke baad DP/naam "gayab" hone
+        // wala masla yahi tha. Ab agar is device par koi naya hosted avatar nahi
+        // hai to jo bekend par pehle se hai (BackendClient.myAvatar) wahi dobara
+        // bhejte hain — kabhi bhi khali string se overwrite nahi karte.
+        val avatarForBackend = currentProfile.avatarUri.takeIf { it.startsWith("http") } ?: BackendClient.myAvatar
         BackendClient.updateProfile(currentProfile.name, avatarForBackend)
     }
 

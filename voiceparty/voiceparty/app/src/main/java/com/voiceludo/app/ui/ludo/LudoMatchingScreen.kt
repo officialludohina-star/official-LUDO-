@@ -1,26 +1,16 @@
 package com.voiceludo.app.ui.ludo
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -29,8 +19,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.ServerMessage
+
+// User ne diya hua torn-paper/ribbon style blue banner — player naam tag ke
+// peeche background ke taur par (game start hote hi dikhta hai).
+private const val PLAYER_NAME_BANNER = "https://i.postimg.cc/T3C5ckRd/file-000000000da882088a81c4962bde4afa.png"
 
 // Asal HTML ke #ludoMatchingScreen jaisa hi — bet confirm hone ke baad "opponents
 // dhoonda ja raha hai" wala screen. Ab yeh REAL bekend se real matchmaking karta
@@ -49,7 +44,7 @@ fun LudoMatchingScreen(
     val totalPool = bet * players
     // Match mil jaane par turant navigate nahi karte — pehle 2 second ke liye
     // sabke asal naam/DP dikhate hain (neeche slots mein), phir game screen
-    // khulti hai. Jab tak yeh null hai, opponent slots loading-gif dikhate hain.
+    // khulti hai. Jab tak yeh null hai, opponent slots loading-spinner dikhate hain.
     var matchedMsg by remember { mutableStateOf<ServerMessage.Matched?>(null) }
     var errorText by remember { mutableStateOf<String?>(null) }
     // Agar matchmaking ke doraan hi bekend se connection toot jaye (net drop)
@@ -83,9 +78,9 @@ fun LudoMatchingScreen(
         val listener: (ServerMessage) -> Unit = { msg ->
             when (msg) {
                 is ServerMessage.Waiting -> {
-                    // Ab yahan koi UI text nahi dikhate — sirf loading-gif hi
-                    // kaafi hai, "1/2 players..." jaisa raw message ab nahi
-                    // dikhaya jata.
+                    // Ab yahan koi UI text nahi dikhate — slots ke andar wala
+                    // spinner hi kaafi hai, "1/2 players..." jaisa raw message
+                    // ab nahi dikhaya jata.
                 }
                 is ServerMessage.Matched -> {
                     matchedMsg = msg
@@ -123,17 +118,16 @@ fun LudoMatchingScreen(
             modifier = Modifier.fillMaxSize().padding(top = 34.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Upar koi bara "searching" gif/text nahi dikhate — searching-animation
-            // ab seedha "Player" (opponent) slot ke andar dikhti hai (neeche
-            // MatchPlayerSlot mein), taake ek hi cheez do jagah repeat na ho.
-            // Sirf connection-drop ek alag/zaroori state hai isliye usay yahan
-            // top par chhota banner ki tarah dikhate hain.
+            // Upar ab koi animated gif nahi chalti — searching-animation seedha
+            // "Player" (opponent) slot ke andar dikhti hai (neeche MatchPlayerSlot
+            // mein, ek chhota rotating ring), taake ek hi cheez do jagah repeat na
+            // ho aur koi hosted gif load/lag na kare. Sirf connection-drop ek
+            // alag/zaroori state hai isliye usay yahan top par dikhate hain.
             if (connectionLost) {
-                Icon(
-                    Icons.Filled.WifiOff,
-                    contentDescription = "no connection",
-                    tint = Color(0xFFff6b6b),
-                    modifier = Modifier.size(48.dp)
+                Text(
+                    "\uD83D\uDCF6",
+                    fontSize = 34.sp,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
@@ -166,11 +160,11 @@ fun LudoMatchingScreen(
             Spacer(Modifier.height(30.dp))
 
             // Players — apna slot hamesha khud ki asal profile (naam+DP) dikhata
-            // hai; baaki slots jab tak match nahi milta loading-gif dikhate hain,
-            // match milte hi (matchedMsg) unki bhi asal naam+DP nazar aati hai.
-            // (matchedMsg.players ki order mein "main" kahin bhi ho sakta hoon,
-            // isliye apna color explicitly nikaal kar baaki sabko "opponents" list
-            // banate hain — sirf index se maan lena galat hota.)
+            // hai; baaki slots jab tak match nahi milta rotating-spinner dikhate
+            // hain, match milte hi (matchedMsg) unki bhi asal naam+DP nazar aati
+            // hai. (matchedMsg.players ki order mein "main" kahin bhi ho sakta
+            // hoon, isliye apna color explicitly nikaal kar baaki sabko
+            // "opponents" list banate hain — sirf index se maan lena galat hota.)
             val opponents = matchedMsg?.let { m -> m.players.filter { it != m.color }.mapNotNull(m.profiles::get) } ?: emptyList()
             if (players == 4) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -255,26 +249,16 @@ private fun MatchPlayerSlot(name: String, avatarUrl: String?, isSearching: Boole
             contentAlignment = Alignment.Center
         ) {
             if (isSearching) {
-                // Koi aur player dhoondte hue is "Player" slot ke andar hi ghoomta
-                // hua loader dikhta hai — silhouette ke upar overlay ki tarah,
-                // taake pata chale ke yahan abhi koi opponent dhoonda ja raha hai.
-                AsyncImage(
-                    model = DEFAULT_AVATAR_IMG,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
-                )
-                val infiniteTransition = rememberInfiniteTransition(label = "searching")
-                val angle by infiniteTransition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 360f,
-                    animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart),
-                    label = "searchingAngle"
-                )
-                CircularProgressIndicator(
-                    modifier = Modifier.fillMaxSize().rotate(angle),
-                    color = Color(0xFFffd93b),
-                    strokeWidth = 3.dp
+                // Yahi wo gif hai — ab sirf isi "Player" (opponent abhi tak nahi
+                // mila) wali jagah chalti hai, screen ke top par nahi. Jaise hi
+                // asal player mil jata hai (matchedMsg set hote hi), yeh gif
+                // hatt kar uski asal DP nazar aane lagti hai.
+                SubcomposeAsyncImage(
+                    model = MATCHING_SEARCH_GIF,
+                    contentDescription = "dhoondh rahe hain",
+                    modifier = Modifier.size(60.dp),
+                    loading = { CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp) },
+                    error = { CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp) }
                 )
             } else {
                 AsyncImage(
@@ -286,14 +270,22 @@ private fun MatchPlayerSlot(name: String, avatarUrl: String?, isSearching: Boole
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(
-            name,
-            color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp,
-            maxLines = 1,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF143c64).copy(alpha = 0.75f))
-                .padding(horizontal = 8.dp, vertical = 3.dp)
-        )
+        // Naam blue banner (torn-ribbon) graphic ke upar dikhta hai, plain
+        // solid-color box ki jagah — match milte hi player ke peeche yehi
+        // banner nazar aata hai.
+        Box(contentAlignment = Alignment.Center) {
+            AsyncImage(
+                model = PLAYER_NAME_BANNER,
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.width(96.dp).height(32.dp)
+            )
+            Text(
+                name,
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 10.dp)
+            )
+        }
     }
 }

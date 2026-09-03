@@ -94,7 +94,12 @@ fun ProfileEditScreen(navController: NavController) {
     // ko bhi sync kar dete hain — kabhi bhi local file path avatar ke taur par
     // nahi bhejte, sirf pehle se hosted http(s) URL (upload hone ke baad).
     fun pushProfileToBackend(currentProfile: UserProfile) {
-        val avatarForBackend = currentProfile.avatarUri.takeIf { it.startsWith("http") } ?: ""
+        // BUG FIX: khali avatar bekend ko na bhejein — server ka UpdateProfile
+        // hamesha avatar column overwrite karta hai, chahe khali ho. Pehle yahan
+        // "" bhej dete thay jab is device par avatarUri http URL na ho (jaise
+        // sirf naam edit kiya ho) — is se pehle se saved DP database se mit
+        // jati thi (logout/on-off ke baad "DP/naam gayab" wala bug yahi tha).
+        val avatarForBackend = currentProfile.avatarUri.takeIf { it.startsWith("http") } ?: BackendClient.myAvatar
         BackendClient.updateProfile(currentProfile.name, avatarForBackend)
     }
 

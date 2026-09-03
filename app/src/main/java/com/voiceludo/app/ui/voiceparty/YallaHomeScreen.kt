@@ -95,8 +95,28 @@ fun YallaHomeScreen(navController: NavController) {
     // profile pichli baar app khuli thi tab edit hui ho.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (BackendClient.playerId != null) {
+            // BUG FIX: pehle yahan is device ki local profile (khali avatar samet)
+            // bhi bekend ko bhej dete thay — agar kisi wajah se is device par
+            // avatarUri abhi http URL na bana ho (jaise dobara login/on-off ke
+            // baad, ya login server se hui lekin local SharedPreferences purani/
+            // khali thi) to yeh bekend par pehle se saved DP/naam ko khali se
+            // overwrite kar deta tha — "logout/on-off ke baad DP/naam gayab" wala
+            // asal masla yahi tha. Ab pehle bekend (server) ka apna naam/avatar
+            // (Auth response se, BackendClient.myName/myAvatar) hi is device ki
+            // local ProfileStore mein utar dete hain — taake local copy hamesha
+            // server ke sath sync rahe, aur khali avatar se bekend ko kabhi
+            // overwrite na karein.
+            if (BackendClient.myName.isNotBlank() || BackendClient.myAvatar.isNotBlank()) {
+                val local = ProfileStore.get(context)
+                if (BackendClient.myName.isNotBlank() && BackendClient.myName != local.name) {
+                    ProfileStore.saveName(context, BackendClient.myName)
+                }
+                if (BackendClient.myAvatar.isNotBlank() && BackendClient.myAvatar != local.avatarUri) {
+                    ProfileStore.saveAvatar(context, BackendClient.myAvatar)
+                }
+            }
             val p = ProfileStore.get(context)
-            val avatarForBackend = p.avatarUri.takeIf { it.startsWith("http") } ?: ""
+            val avatarForBackend = p.avatarUri.takeIf { it.startsWith("http") } ?: BackendClient.myAvatar
             BackendClient.updateProfile(p.name, avatarForBackend)
         }
     }

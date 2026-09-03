@@ -129,6 +129,15 @@ val RANK_BADGE_IMG: Map<Int, String> = mapOf(
     3 to "file:///android_asset/img/file-00000000229c81fd83b90d22a29f7bba.png"
 )
 
+// Matching screen "VS" badge — user ka diya hua fresh link.
+const val VS_ICON_IMG = "https://i.postimg.cc/qMtCGcNh/bg-associate-watch-vs.webp"
+// Player slot ke andar chalne wali "dhoondh rahe hain" gif — jab tak asal
+// opponent nahi milta, sirf isi slot ke andar chalti hai (screen ke top par nahi).
+const val MATCHING_SEARCH_GIF = "https://i.postimg.cc/zfFtpYyw/match.gif"
+// Jab internet na ho ya frontend bekend WebSocket se connect na ho pa raha ho —
+// yehi icon baar-baar (jahan bhi connection fail/lost dikhana ho) use hota hai.
+const val NO_CONNECTION_ICON = "https://i.postimg.cc/hGXpXvTZ/IMG-20260902-WA0005.jpg"
+
 const val DEFAULT_AVATAR_IMG = "file:///android_asset/img/user-icon.png"
 const val MODE_2P_ICON = "file:///android_asset/img/game-online-2p-uncheck.png"
 const val MODE_4P_ICON = "file:///android_asset/img/game-online-4p-uncheck.png"

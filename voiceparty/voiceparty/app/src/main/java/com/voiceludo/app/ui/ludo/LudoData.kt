@@ -133,7 +133,10 @@ const val DEFAULT_AVATAR_IMG = "file:///android_asset/img/user-icon.png"
 
 // Matching screen ("opponents dhoonda ja raha hai") — VS icon jo dono avatars
 // ke beech dikhta hai (1v1 layout mein).
-const val VS_ICON_IMG = "https://i.postimg.cc/5214mgzR/bg-associate-watch-vs.webp"
+const val VS_ICON_IMG = "https://i.postimg.cc/qMtCGcNh/bg-associate-watch-vs.webp"
+// Player slot ke andar chalne wali "dhoondh rahe hain" gif — jab tak asal
+// opponent nahi milta, sirf isi slot ke andar chalti hai (screen ke top par nahi).
+const val MATCHING_SEARCH_GIF = "https://i.postimg.cc/zfFtpYyw/match.gif"
 const val MODE_2P_ICON = "file:///android_asset/img/game-online-2p-uncheck.png"
 const val MODE_4P_ICON = "file:///android_asset/img/game-online-4p-uncheck.png"
 
