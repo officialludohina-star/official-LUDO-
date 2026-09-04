@@ -474,6 +474,14 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     state.currentColor == state.myColor &&
                     !state.isMoving.value &&
                     i in state.movable
+                // BUG FIX: pehle yard tokens ka "current turn" ring sirf isMovable
+                // ke barabar tha — matlab yard mein baithe token par glow sirf
+                // tabhi aati jab wahi token khud is waqt chal sakta ho (jaise 6
+                // aaya ho). Path/board wale tokens ka ring is se alag, behtar
+                // tarike se kaam karta tha: jis ki bhi bari ho uske SAARE tokens
+                // par ring aati (chahe wo abhi movable ho ya na ho). Ab yard
+                // tokens ko bhi wahi consistent rule di hai.
+                val isCurrentTurnYard = color == state.currentColor
 
                 key(color, i) {
                     val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "yardTokenX")
@@ -484,7 +492,7 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                         animX = animX,
                         animY = animY,
                         isMovable = isMovable,
-                        isCurrentTurn = isMovable,
+                        isCurrentTurn = isCurrentTurnYard,
                         tokenColor = color,
                         imageUrl = TOKEN_IMG[color],
                         contentDescription = "$color token $i",

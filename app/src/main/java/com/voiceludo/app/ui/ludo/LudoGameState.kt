@@ -202,7 +202,9 @@ class LudoGameState(
                     val c = e.color?.let { runCatching { LudoColor.valueOf(it) }.getOrNull() } ?: continue
                     rollRequested.value = false
                     isRolling.value = true
-                    delay(950)
+                    // Pehle 950ms tha — user ke mutabiq dice roll ab thori
+                    // tezi se result dikhaye.
+                    delay(550)
                     isRolling.value = false
                     diceByColor[c] = e.value
                     diceRolled.value = true
@@ -261,19 +263,26 @@ class LudoGameState(
             setPos(0)
             delay(230)
         } else if (e.arrowJumped) {
-            // Arrow-jump: token arrow-tail par pohochte hi turant udhar se
-            // ghayab ho kar seedha agay wale (arrow-head) dabbe par nazar aata
-            // hai — koi darmiyani crawl nahi (pehle chand cells chal ke phir
-            // warp karta tha, jo aadha-adhura "jump" jaisa ajeeb lagta tha).
-            delay(220)
-            setPos(e.to)
-            delay(180)
-        } else {
+            // Arrow-jump: user ka feedback — instant teleport (purana) ajeeb
+            // lagta hai, token ko dikhna chahiye ke wo arrow se guzar kar
+            // agay nikal raha hai. Ab poori doori (chhote se bade step) tez
+            // raftar se cross karte hain (normal chalne se kaafi tez —
+            // "shortcut" ka ehsaas — lekin instant ghayab-nazar nahi hota).
             var pos = e.from
             while (pos < e.to) {
                 pos += 1
                 setPos(pos)
-                delay(150)
+                delay(55)
+            }
+            delay(150)
+        } else {
+            // Normal move: pehle 150ms/step tha, thora slow kar diya taake
+            // token step-step chalta hua saaf nazar aaye, jump jaisa na lage.
+            var pos = e.from
+            while (pos < e.to) {
+                pos += 1
+                setPos(pos)
+                delay(210)
             }
         }
         setPos(e.to)
