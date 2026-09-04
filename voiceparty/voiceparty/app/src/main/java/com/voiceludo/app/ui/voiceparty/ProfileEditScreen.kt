@@ -45,7 +45,8 @@ import java.io.File
 // window.currentUserData + Firestore setDoc jaisa hi, bas on-device.
 // ============================================================================
 
-private const val DEFAULT_AVATAR = "file:///android_asset/img/user-icon.png"
+// Default avatar placeholder ab is hosted link se aata hai (user ne diya).
+private const val DEFAULT_AVATAR = "https://i.postimg.cc/g0SqtzH5/file-0000000002f082088d7fd816dba9e8a3.png"
 private const val UPLOAD_PHOTO_ICON = "https://i.postimg.cc/PrbZKVL7/IMG-20260831-WA0011.jpg"
 private const val FEMALE_ICON = "https://i.postimg.cc/SKgfdTvw/female.webp"
 private const val MALE_ICON = "https://i.postimg.cc/65CVg5SN/male.webp"
@@ -73,10 +74,15 @@ private val FLAG_LIST: List<Pair<String, String>> by lazy {
     }.distinctBy { it.second }.sortedBy { it.second }
 }
 
-private val ProfileGreenBg = Color(0xFFf5fff7)
-private val ProfileGreenBorder = Color(0xFF0a7a42)
-private val ProfileGreenDark = Color(0xFF2a5a3a)
-private val ProfileGreenAccent = Color(0xFF22c55e)
+// Naya dark-green "glow" theme (reference screenshot ke mutabiq) — pehle wala
+// halka-safed card theme ab sirf dialogs ke liye reh gaya hai.
+private val ProfileGreenBg = Color(0xFF06170f)          // poore screen ka dark base
+private val ProfileGreenBorder = Color(0xFF0a2e1c)       // (ab use nahi hota, backward-compat ke liye rakha)
+private val ProfileGreenDark = Color(0xFFcafcdc)         // field values (halka mint-white)
+private val ProfileGreenAccent = Color(0xFF3ce87a)       // labels, arrows, glow accent
+private val FieldBoxBg = Color(0xFF0b2418)
+private val FieldBoxBorder = Color(0xFF1f5c3a)
+private val PlaceholderTextColor = Color(0xFF5f9c7c)
 
 @Composable
 fun ProfileEditScreen(navController: NavController) {
@@ -143,188 +149,190 @@ fun ProfileEditScreen(navController: NavController) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF051a0f))) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(ProfileGreenBorder)
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    Box(modifier = Modifier.fillMaxSize().background(ProfileGreenBg)) {
+        // Chhoti back arrow, top-left par halki si (design ko clutter kiye
+        // baghair navigation ke liye zaroori hai).
+        Box(
+            modifier = Modifier
+                .padding(top = 14.dp, start = 10.dp)
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.06f))
+                .clickable { navController.popBackStack() }
+                .align(Alignment.TopStart),
+            contentAlignment = Alignment.Center
+        ) { Text("\u2039", color = ProfileGreenAccent, fontSize = 20.sp, fontWeight = FontWeight.Black) }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+        ) {
+            Spacer(Modifier.height(28.dp))
+
+            Text(
+                "Edit Profile",
+                color = ProfileGreenAccent,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 26.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // ---- Avatar: glow ke beech circle, neeche-right corner par
+            // chhota pencil-badge (tap karte hi gallery khul jati hai). ----
+            Box(
+                modifier = Modifier.fillMaxWidth().height(180.dp),
+                contentAlignment = Alignment.Center
             ) {
+                // Radial glow background
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .clickable { navController.popBackStack() },
-                    contentAlignment = Alignment.Center
-                ) { Text("\u2039", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black) }
-
-                Text(
-                    "Edit Profile",
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 16.sp
-                )
-
-                Spacer(Modifier.size(32.dp))
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(ProfileGreenBg)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                // ---- Avatar + alag se upload button (avatar ke right side wali
-                // jagah, red-box wali position) — tap karte hi gallery khul jati hai. ----
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val avatarModel = when {
-                        profile.avatarUri.isEmpty() -> DEFAULT_AVATAR
-                        profile.avatarUri.startsWith("http") -> profile.avatarUri
-                        else -> File(profile.avatarUri)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(Color(0xFF22c55e), Color(0xFFa349ff))))
-                            .border(3.dp, Color.White, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = avatarModel,
-                            contentDescription = "avatar",
-                            modifier = Modifier
-                                .size(if (profile.avatarUri.isEmpty()) 60.dp else 96.dp)
-                                .clip(CircleShape),
-                            contentScale = if (profile.avatarUri.isEmpty()) ContentScale.Fit else ContentScale.Crop
-                        )
-                    }
-
-                    Spacer(Modifier.width(16.dp))
-
-                    // Upload button — avatar ke bagal mein, tap karte hi gallery/photo-picker khul jati hai.
-                    Box(
-                        modifier = Modifier
-                            .size(width = 84.dp, height = 60.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White)
-                            .border(2.dp, ProfileGreenAccent, RoundedCornerShape(10.dp))
-                            .clickable {
-                                pickPhoto.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        .size(260.dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    ProfileGreenAccent.copy(alpha = 0.35f),
+                                    ProfileGreenAccent.copy(alpha = 0.08f),
+                                    Color.Transparent
                                 )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = UPLOAD_PHOTO_ICON,
-                            contentDescription = "upload photo",
-                            modifier = Modifier.size(34.dp)
+                            ),
+                            shape = CircleShape
                         )
-                    }
-                }
-
-                if (avatarUploading) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Photo upload ho rahi hai...",
-                        color = ProfileGreenDark,
-                        fontSize = 11.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-                avatarError?.let { err ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        err,
-                        color = Color(0xFFB33123),
-                        fontSize = 11.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                // ---- Name ----
-                ProfileRow(
-                    label = null,
-                    value = profile.name,
-                    valueColor = ProfileGreenDark,
-                    onClick = { showNameDialog = true }
                 )
-                // ---- Flag ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showFlagDialog = true }
-                        .padding(vertical = 14.dp, horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(profile.flagIcon, fontSize = 18.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(profile.flagName, color = ProfileGreenDark, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                    Text("\u25B6", color = ProfileGreenAccent)
-                }
-                RowDivider()
 
-                // ---- Gender ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showGenderDialog = true }
-                        .padding(vertical = 14.dp, horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        GenderIcon(profile.gender, 24.dp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            profile.gender.replaceFirstChar { it.uppercase() },
-                            color = ProfileGreenDark,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
-                    Text("\u25B6", color = ProfileGreenAccent)
+                val avatarModel = when {
+                    profile.avatarUri.isEmpty() -> DEFAULT_AVATAR
+                    profile.avatarUri.startsWith("http") -> profile.avatarUri
+                    else -> File(profile.avatarUri)
                 }
-                RowDivider()
 
-                // ---- Bio ----
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showBioDialog = true }
-                        .padding(vertical = 14.dp, horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0d2818))
+                        .clickable {
+                            pickPhoto.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        profile.bio.ifEmpty { "Bio is left empty" },
-                        color = if (profile.bio.isEmpty()) Color(0xFFa0c0a0) else ProfileGreenDark,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp,
-                        fontStyle = if (profile.bio.isEmpty()) FontStyle.Italic else FontStyle.Normal,
-                        modifier = Modifier.weight(1f)
+                    AsyncImage(
+                        model = avatarModel,
+                        contentDescription = "avatar",
+                        modifier = Modifier
+                            .size(if (profile.avatarUri.isEmpty()) 76.dp else 120.dp)
+                            .clip(CircleShape),
+                        contentScale = if (profile.avatarUri.isEmpty()) ContentScale.Fit else ContentScale.Crop
                     )
-                    Text("\u25B6", color = ProfileGreenAccent)
+                }
+
+                // Pencil-badge, avatar ke neeche-right corner par
+                Box(
+                    modifier = Modifier
+                        .offset(x = 42.dp, y = 42.dp)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0d2818))
+                        .border(2.dp, ProfileGreenAccent.copy(alpha = 0.7f), CircleShape)
+                        .clickable {
+                            pickPhoto.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = UPLOAD_PHOTO_ICON,
+                        contentDescription = "edit avatar",
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
+
+            if (avatarUploading) {
+                Text(
+                    "Photo upload ho rahi hai...",
+                    color = ProfileGreenAccent,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+            avatarError?.let { err ->
+                Text(
+                    err,
+                    color = Color(0xFFff6b6b),
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ---- Username ----
+            FieldLabel("Username (0/3 times per day)")
+            FieldBox(onClick = { showNameDialog = true }) {
+                Text(
+                    profile.name,
+                    color = ProfileGreenDark,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            // ---- Gender ----
+            FieldLabel("Gender")
+            FieldBox(onClick = { showGenderDialog = true }) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    GenderIcon(profile.gender, 20.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        profile.gender.replaceFirstChar { it.uppercase() },
+                        color = ProfileGreenDark,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            // ---- Country ----
+            FieldLabel("Country")
+            FieldBox(onClick = { showFlagDialog = true }) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Text(profile.flagIcon, fontSize = 16.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(profile.flagName, color = ProfileGreenDark, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            // ---- Bio ----
+            FieldLabel("Bio")
+            FieldBox(onClick = { showBioDialog = true }, minHeight = 140.dp, alignTop = true) {
+                Text(
+                    profile.bio.ifEmpty { "Bio is left empty" },
+                    color = if (profile.bio.isEmpty()) PlaceholderTextColor else ProfileGreenDark,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    fontStyle = if (profile.bio.isEmpty()) FontStyle.Italic else FontStyle.Normal,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(28.dp))
         }
     }
 
@@ -412,32 +420,43 @@ fun ProfileEditScreen(navController: NavController) {
 
 }
 
+// Label jo har field box ke upar dikhta hai (jaisa "Username (0/3 times per
+// day)", "Gender", "Country", "Bio" reference image mein).
 @Composable
-private fun ProfileRow(label: String?, value: String, valueColor: Color, onClick: () -> Unit) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(vertical = 14.dp, horizontal = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(value, color = valueColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("\u25B6", color = ProfileGreenAccent)
-        }
-        RowDivider()
-    }
+private fun FieldLabel(text: String) {
+    Text(
+        text,
+        color = ProfileGreenAccent,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
 }
 
+// Outlined rounded box (dark fill, green border), andar content + right arrow —
+// reference screenshot ke har row jaisa. Bio ke liye taller/top-aligned bhi ho sakta hai.
 @Composable
-private fun RowDivider() {
-    Spacer(
+private fun FieldBox(
+    onClick: () -> Unit,
+    minHeight: androidx.compose.ui.unit.Dp = 52.dp,
+    alignTop: Boolean = false,
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(2.dp)
-            .background(Color(0xFFd0e8d0))
-    )
+            .heightIn(min = minHeight)
+            .clip(RoundedCornerShape(10.dp))
+            .background(FieldBoxBg)
+            .border(1.dp, FieldBoxBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = if (alignTop) Alignment.Top else Alignment.CenterVertically
+    ) {
+        content()
+        Text("\u276F", color = ProfileGreenAccent, fontSize = 14.sp)
+    }
 }
 
 @Composable
