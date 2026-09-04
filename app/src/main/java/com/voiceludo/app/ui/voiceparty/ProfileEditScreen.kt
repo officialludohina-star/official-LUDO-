@@ -22,13 +22,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,7 +45,12 @@ import java.io.File
 // window.currentUserData + Firestore setDoc jaisa hi, bas on-device.
 // ============================================================================
 
+// Default avatar placeholder (jab tak user apni photo nahi lagata) — wahi
+// asal generic person-icon jo pehle se tha.
 private const val DEFAULT_AVATAR = "file:///android_asset/img/user-icon.png"
+// Poore screen ka background (green gradient + glow/sparkles + card frame) —
+// user ne diya hua link.
+private const val SCREEN_BACKGROUND_IMAGE = "https://i.postimg.cc/W4MZk05H/file-00000000076882088e096a6ce8072b70.png"
 private const val UPLOAD_PHOTO_ICON = "https://i.postimg.cc/PrbZKVL7/IMG-20260831-WA0011.jpg"
 private const val FEMALE_ICON = "https://i.postimg.cc/SKgfdTvw/female.webp"
 private const val MALE_ICON = "https://i.postimg.cc/65CVg5SN/male.webp"
@@ -76,10 +78,26 @@ private val FLAG_LIST: List<Pair<String, String>> by lazy {
     }.distinctBy { it.second }.sortedBy { it.second }
 }
 
-private val ProfileGreenBg = Color(0xFFf5fff7)
-private val ProfileGreenBorder = Color(0xFF0a7a42)
-private val ProfileGreenDark = Color(0xFF2a5a3a)
-private val ProfileGreenAccent = Color(0xFF22c55e)
+// Naya dark-green "glow" theme (reference screenshot ke mutabiq) — pehle wala
+// halka-safed card theme ab sirf dialogs ke liye reh gaya hai.
+private val ProfileGreenBg = Color(0xFF06170f)          // poore screen ka dark base
+private val ProfileGreenBorder = Color(0xFF0a2e1c)       // (ab use nahi hota, backward-compat ke liye rakha)
+private val ProfileGreenDark = Color(0xFFcafcdc)         // field values (halka mint-white)
+private val ProfileGreenAccent = Color(0xFF3ce87a)       // labels, arrows, glow accent
+private val FieldBoxBg = Color(0xFF0b2418)
+private val FieldBoxBorder = Color(0xFF1f5c3a)
+private val PlaceholderTextColor = Color(0xFF5f9c7c)
+
+// Naya light/mint card (reference background-image ke andar wala blank
+// panel) — fields ab isi card ke andar, light theme mein render hoti hain.
+private val CardBg = Color(0xFFeef8f2)
+private val CardBorder = Color(0xFFcfe8d8)
+private val CardLabelColor = Color(0xFF0a7a42)
+private val CardValueColor = Color(0xFF1e4d30)
+private val CardArrowColor = Color(0xFF22c55e)
+private val CardPlaceholderColor = Color(0xFF8fb89f)
+private val CardFieldBoxBg = Color(0xFFf6fffa)
+private val CardFieldBoxBorder = Color(0xFFd7ecdf)
 
 @Composable
 fun ProfileEditScreen(navController: NavController) {
@@ -92,22 +110,16 @@ fun ProfileEditScreen(navController: NavController) {
     var showFlagDialog by remember { mutableStateOf(false) }
     var avatarUploading by remember { mutableStateOf(false) }
     var avatarError by remember { mutableStateOf<String?>(null) }
-    var idCopied by remember { mutableStateOf(false) }
-    val clipboard = LocalClipboardManager.current
 
     // Naam/avatar badalte hi bekend (real account, game-partners ko dikhne wala)
     // ko bhi sync kar dete hain — kabhi bhi local file path avatar ke taur par
     // nahi bhejte, sirf pehle se hosted http(s) URL (upload hone ke baad).
     fun pushProfileToBackend(currentProfile: UserProfile) {
-        // BUG FIX: pehle yahan avatar na hone par khali string "" bekend ko bhej
-        // dete thay — bekend ka UpdateProfile hamesha avatar column overwrite
-        // karta hai, chahe khali kyun na ho, isliye jab bhi sirf naam edit hota
-        // (avatar edit nahi) ya app dobara khulte hi is device par avatarUri abhi
-        // http URL na bana ho, to yeh pehle se saved DP ko database mein permanently
-        // mita deta tha — logout/login ya app on-off ke baad DP/naam "gayab" hone
-        // wala masla yahi tha. Ab agar is device par koi naya hosted avatar nahi
-        // hai to jo bekend par pehle se hai (BackendClient.myAvatar) wahi dobara
-        // bhejte hain — kabhi bhi khali string se overwrite nahi karte.
+        // BUG FIX: khali avatar bekend ko na bhejein — server ka UpdateProfile
+        // hamesha avatar column overwrite karta hai, chahe khali ho. Pehle yahan
+        // "" bhej dete thay jab is device par avatarUri http URL na ho (jaise
+        // sirf naam edit kiya ho) — is se pehle se saved DP database se mit
+        // jati thi (logout/on-off ke baad "DP/naam gayab" wala bug yahi tha).
         val avatarForBackend = currentProfile.avatarUri.takeIf { it.startsWith("http") } ?: BackendClient.myAvatar
         BackendClient.updateProfile(currentProfile.name, avatarForBackend)
     }
@@ -152,229 +164,190 @@ fun ProfileEditScreen(navController: NavController) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF051a0f))) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(ProfileGreenBorder)
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .clickable { navController.popBackStack() },
-                    contentAlignment = Alignment.Center
-                ) { Text("\u2039", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Poora background — green gradient + glow/sparkles (user ka diya link)
+        AsyncImage(
+            model = SCREEN_BACKGROUND_IMAGE,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
 
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // ---- Header: title + X (close) button ----
+            Box(modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp)) {
                 Text(
                     "Edit Profile",
-                    color = Color.White,
+                    color = ProfileGreenAccent,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 16.sp
+                    fontSize = 24.sp,
+                    modifier = Modifier.align(Alignment.Center),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
-
-                Spacer(Modifier.size(32.dp))
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 18.dp)
+                        .size(32.dp)
+                        .clickable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center
+                ) { Text("\u2715", color = ProfileGreenAccent, fontSize = 20.sp, fontWeight = FontWeight.Black) }
             }
 
+            // ---- Avatar: glow-strip ke beech circle, neeche-right corner par
+            // chhota pencil-badge (tap karte hi gallery khul jati hai). ----
+            Box(
+                modifier = Modifier.fillMaxWidth().height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val avatarModel = when {
+                    profile.avatarUri.isEmpty() -> DEFAULT_AVATAR
+                    profile.avatarUri.startsWith("http") -> profile.avatarUri
+                    else -> File(profile.avatarUri)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0d2818))
+                        .clickable {
+                            pickPhoto.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = avatarModel,
+                        contentDescription = "avatar",
+                        modifier = Modifier
+                            .size(if (profile.avatarUri.isEmpty()) 64.dp else 100.dp)
+                            .clip(CircleShape),
+                        contentScale = if (profile.avatarUri.isEmpty()) ContentScale.Fit else ContentScale.Crop
+                    )
+                }
+
+                // Pencil-badge, avatar ke neeche-right corner par
+                Box(
+                    modifier = Modifier
+                        .offset(x = 36.dp, y = 36.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0d2818))
+                        .border(2.dp, ProfileGreenAccent.copy(alpha = 0.7f), CircleShape)
+                        .clickable {
+                            pickPhoto.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = UPLOAD_PHOTO_ICON,
+                        contentDescription = "edit avatar",
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            if (avatarUploading) {
+                Text(
+                    "Photo upload ho rahi hai...",
+                    color = ProfileGreenAccent,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+            avatarError?.let { err ->
+                Text(
+                    err,
+                    color = Color(0xFFff6b6b),
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ---- Light/mint card — reference image ke blank-panel jaisa —
+            // Username/Gender/Country/Bio sab isi ke andar, light theme mein. ----
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(ProfileGreenBg)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(CardBg)
+                    .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
+                    .padding(18.dp)
             ) {
-                // ---- Avatar + alag se upload button (avatar ke right side wali
-                // jagah, red-box wali position) — tap karte hi gallery khul jati hai. ----
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val avatarModel = when {
-                        profile.avatarUri.isEmpty() -> DEFAULT_AVATAR
-                        profile.avatarUri.startsWith("http") -> profile.avatarUri
-                        else -> File(profile.avatarUri)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(Color(0xFF22c55e), Color(0xFFa349ff))))
-                            .border(3.dp, Color.White, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = avatarModel,
-                            contentDescription = "avatar",
-                            modifier = Modifier
-                                .size(if (profile.avatarUri.isEmpty()) 60.dp else 96.dp)
-                                .clip(CircleShape),
-                            contentScale = if (profile.avatarUri.isEmpty()) ContentScale.Fit else ContentScale.Crop
-                        )
-                    }
-
-                    Spacer(Modifier.width(16.dp))
-
-                    // Upload button — avatar ke bagal mein, tap karte hi gallery/photo-picker khul jati hai.
-                    // Pehle se bara (108x76) aur ab koi green border nahi — sirf halka
-                    // saya (shadow) taake button khud ubhar kar dikhe, bina border ke.
-                    Box(
-                        modifier = Modifier
-                            .size(width = 108.dp, height = 76.dp)
-                            .shadow(4.dp, RoundedCornerShape(12.dp))
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White)
-                            .clickable {
-                                pickPhoto.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = UPLOAD_PHOTO_ICON,
-                            contentDescription = "upload photo",
-                            modifier = Modifier.size(44.dp)
-                        )
-                    }
-                }
-
-                if (avatarUploading) {
-                    Spacer(Modifier.height(8.dp))
+                // ---- Username ----
+                CardFieldLabel("Username (0/3 times per day)")
+                CardFieldBox(onClick = { showNameDialog = true }) {
                     Text(
-                        "Uploading photo...",
-                        color = ProfileGreenDark,
-                        fontSize = 11.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-                avatarError?.let { err ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        err,
-                        color = Color(0xFFB33123),
-                        fontSize = 11.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        profile.name,
+                        color = CardValueColor,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
-                Spacer(Modifier.height(20.dp))
-
-                // ---- Name ----
-                ProfileRow(
-                    label = null,
-                    value = profile.name,
-                    valueColor = ProfileGreenDark,
-                    onClick = { showNameDialog = true }
-                )
-
-                // ---- Player ID — bekend server ne jo asal ID di hai, tap karte hi
-                // clipboard par copy ho jati hai (dosto ko share karne ke liye). ----
-                BackendClient.playerId?.let { id ->
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    clipboard.setText(AnnotatedString(id))
-                                    idCopied = true
-                                }
-                                .padding(vertical = 14.dp, horizontal = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text("Player ID", color = Color(0xFFa0c0a0), fontSize = 10.sp)
-                                Text("ID: $id", color = ProfileGreenDark, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            }
-                            Text(
-                                if (idCopied) "Copied!" else "Copy",
-                                color = if (idCopied) ProfileGreenAccent else Color(0xFF0a7a42),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                        }
-                        RowDivider()
-                    }
-                    LaunchedEffect(idCopied) {
-                        if (idCopied) {
-                            kotlinx.coroutines.delay(1500)
-                            idCopied = false
-                        }
-                    }
-                }
-
-                // ---- Flag ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showFlagDialog = true }
-                        .padding(vertical = 14.dp, horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(profile.flagIcon, fontSize = 18.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(profile.flagName, color = ProfileGreenDark, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                    Text("\u25B6", color = ProfileGreenAccent)
-                }
-                RowDivider()
+                Spacer(Modifier.height(16.dp))
 
                 // ---- Gender ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showGenderDialog = true }
-                        .padding(vertical = 14.dp, horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        GenderIcon(profile.gender, 24.dp)
-                        Spacer(Modifier.width(6.dp))
+                CardFieldLabel("Gender")
+                CardFieldBox(onClick = { showGenderDialog = true }) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        GenderIcon(profile.gender, 20.dp)
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             profile.gender.replaceFirstChar { it.uppercase() },
-                            color = ProfileGreenDark,
-                            fontWeight = FontWeight.Bold,
+                            color = CardValueColor,
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp
                         )
                     }
-                    Text("\u25B6", color = ProfileGreenAccent)
                 }
-                RowDivider()
+
+                Spacer(Modifier.height(16.dp))
+
+                // ---- Country ----
+                CardFieldLabel("Country")
+                CardFieldBox(onClick = { showFlagDialog = true }) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Text(profile.flagIcon, fontSize = 16.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(profile.flagName, color = CardValueColor, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
 
                 // ---- Bio ----
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showBioDialog = true }
-                        .padding(vertical = 14.dp, horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                CardFieldLabel("Bio")
+                CardFieldBox(onClick = { showBioDialog = true }, minHeight = 120.dp, alignTop = true) {
                     Text(
                         profile.bio.ifEmpty { "Bio is left empty" },
-                        color = if (profile.bio.isEmpty()) Color(0xFFa0c0a0) else ProfileGreenDark,
+                        color = if (profile.bio.isEmpty()) CardPlaceholderColor else CardValueColor,
                         fontWeight = FontWeight.Medium,
                         fontSize = 13.sp,
                         fontStyle = if (profile.bio.isEmpty()) FontStyle.Italic else FontStyle.Normal,
                         modifier = Modifier.weight(1f)
                     )
-                    Text("\u25B6", color = ProfileGreenAccent)
                 }
             }
+
+            Spacer(Modifier.height(28.dp))
         }
     }
+
 
     // ---- Name modal ----
     if (showNameDialog) {
@@ -460,32 +433,80 @@ fun ProfileEditScreen(navController: NavController) {
 
 }
 
+// Label jo har field box ke upar dikhta hai (jaisa "Username (0/3 times per
+// day)", "Gender", "Country", "Bio" reference image mein).
 @Composable
-private fun ProfileRow(label: String?, value: String, valueColor: Color, onClick: () -> Unit) {
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(vertical = 14.dp, horizontal = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(value, color = valueColor, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text("\u25B6", color = ProfileGreenAccent)
-        }
-        RowDivider()
+private fun FieldLabel(text: String) {
+    Text(
+        text,
+        color = ProfileGreenAccent,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+}
+
+// Outlined rounded box (dark fill, green border), andar content + right arrow —
+// reference screenshot ke har row jaisa. Bio ke liye taller/top-aligned bhi ho sakta hai.
+@Composable
+private fun FieldBox(
+    onClick: () -> Unit,
+    minHeight: androidx.compose.ui.unit.Dp = 52.dp,
+    alignTop: Boolean = false,
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = minHeight)
+            .clip(RoundedCornerShape(10.dp))
+            .background(FieldBoxBg)
+            .border(1.dp, FieldBoxBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = if (alignTop) Alignment.Top else Alignment.CenterVertically
+    ) {
+        content()
+        Text("\u276F", color = ProfileGreenAccent, fontSize = 14.sp)
     }
 }
 
+// Light/mint card ke andar wali label + box variants (dark text on light bg) —
+// naye background-image design ke card ke liye.
 @Composable
-private fun RowDivider() {
-    Spacer(
+private fun CardFieldLabel(text: String) {
+    Text(
+        text,
+        color = CardLabelColor,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        modifier = Modifier.padding(bottom = 6.dp)
+    )
+}
+
+@Composable
+private fun CardFieldBox(
+    onClick: () -> Unit,
+    minHeight: androidx.compose.ui.unit.Dp = 50.dp,
+    alignTop: Boolean = false,
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(2.dp)
-            .background(Color(0xFFd0e8d0))
-    )
+            .heightIn(min = minHeight)
+            .clip(RoundedCornerShape(10.dp))
+            .background(CardFieldBoxBg)
+            .border(1.dp, CardFieldBoxBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = if (alignTop) Alignment.Top else Alignment.CenterVertically
+    ) {
+        content()
+        Text("\u276F", color = CardArrowColor, fontSize = 13.sp)
+    }
 }
 
 @Composable
@@ -553,7 +574,7 @@ private fun FlagPickerDialog(onDismiss: () -> Unit, onSelect: (icon: String, nam
                         ) {
                             Text(icon, fontSize = 16.sp)
                             Spacer(Modifier.width(8.dp))
-                            Text(name, fontSize = 13.sp, color = ProfileGreenDark)
+                            Text(name, fontSize = 13.sp, color = CardValueColor)
                         }
                     }
                 }

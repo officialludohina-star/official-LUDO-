@@ -190,7 +190,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                     Box(modifier = Modifier.fillMaxSize()) {
-                        NavHost(navController = navController, startDestination = startDestination) {
+                        NavHost(
+                            navController = navController,
+                            startDestination = startDestination,
+                            enterTransition = { androidx.compose.animation.EnterTransition.None },
+                            exitTransition = { androidx.compose.animation.ExitTransition.None },
+                            popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                            popExitTransition = { androidx.compose.animation.ExitTransition.None }
+                        ) {
                             composable("vp_splash") { SplashAutoLoginScreen(navController) }
                             composable("vp_main") { VoicePartyMainScreen(navController) }
                             composable("vp_mobile_login") { MobileLoginScreen(navController) }

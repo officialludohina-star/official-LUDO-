@@ -45,8 +45,12 @@ import java.io.File
 // window.currentUserData + Firestore setDoc jaisa hi, bas on-device.
 // ============================================================================
 
-// Default avatar placeholder ab is hosted link se aata hai (user ne diya).
-private const val DEFAULT_AVATAR = "https://i.postimg.cc/g0SqtzH5/file-0000000002f082088d7fd816dba9e8a3.png"
+// Default avatar placeholder (jab tak user apni photo nahi lagata) — wahi
+// asal generic person-icon jo pehle se tha.
+private const val DEFAULT_AVATAR = "file:///android_asset/img/user-icon.png"
+// Poore screen ka background (green gradient + glow/sparkles + card frame) —
+// user ne diya hua link.
+private const val SCREEN_BACKGROUND_IMAGE = "https://i.postimg.cc/W4MZk05H/file-00000000076882088e096a6ce8072b70.png"
 private const val UPLOAD_PHOTO_ICON = "https://i.postimg.cc/PrbZKVL7/IMG-20260831-WA0011.jpg"
 private const val FEMALE_ICON = "https://i.postimg.cc/SKgfdTvw/female.webp"
 private const val MALE_ICON = "https://i.postimg.cc/65CVg5SN/male.webp"
@@ -83,6 +87,17 @@ private val ProfileGreenAccent = Color(0xFF3ce87a)       // labels, arrows, glow
 private val FieldBoxBg = Color(0xFF0b2418)
 private val FieldBoxBorder = Color(0xFF1f5c3a)
 private val PlaceholderTextColor = Color(0xFF5f9c7c)
+
+// Naya light/mint card (reference background-image ke andar wala blank
+// panel) — fields ab isi card ke andar, light theme mein render hoti hain.
+private val CardBg = Color(0xFFeef8f2)
+private val CardBorder = Color(0xFFcfe8d8)
+private val CardLabelColor = Color(0xFF0a7a42)
+private val CardValueColor = Color(0xFF1e4d30)
+private val CardArrowColor = Color(0xFF22c55e)
+private val CardPlaceholderColor = Color(0xFF8fb89f)
+private val CardFieldBoxBg = Color(0xFFf6fffa)
+private val CardFieldBoxBorder = Color(0xFFd7ecdf)
 
 @Composable
 fun ProfileEditScreen(navController: NavController) {
@@ -149,61 +164,46 @@ fun ProfileEditScreen(navController: NavController) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(ProfileGreenBg)) {
-        // Chhoti back arrow, top-left par halki si (design ko clutter kiye
-        // baghair navigation ke liye zaroori hai).
-        Box(
-            modifier = Modifier
-                .padding(top = 14.dp, start = 10.dp)
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-                .clickable { navController.popBackStack() }
-                .align(Alignment.TopStart),
-            contentAlignment = Alignment.Center
-        ) { Text("\u2039", color = ProfileGreenAccent, fontSize = 20.sp, fontWeight = FontWeight.Black) }
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Poora background — green gradient + glow/sparkles (user ka diya link)
+        AsyncImage(
+            model = SCREEN_BACKGROUND_IMAGE,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
         ) {
-            Spacer(Modifier.height(28.dp))
-
-            Text(
-                "Edit Profile",
-                color = ProfileGreenAccent,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 26.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            // ---- Avatar: glow ke beech circle, neeche-right corner par
-            // chhota pencil-badge (tap karte hi gallery khul jati hai). ----
-            Box(
-                modifier = Modifier.fillMaxWidth().height(180.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Radial glow background
+            // ---- Header: title + X (close) button ----
+            Box(modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp)) {
+                Text(
+                    "Edit Profile",
+                    color = ProfileGreenAccent,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 24.sp,
+                    modifier = Modifier.align(Alignment.Center),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
                 Box(
                     modifier = Modifier
-                        .size(260.dp)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    ProfileGreenAccent.copy(alpha = 0.35f),
-                                    ProfileGreenAccent.copy(alpha = 0.08f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = CircleShape
-                        )
-                )
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 18.dp)
+                        .size(32.dp)
+                        .clickable { navController.popBackStack() },
+                    contentAlignment = Alignment.Center
+                ) { Text("\u2715", color = ProfileGreenAccent, fontSize = 20.sp, fontWeight = FontWeight.Black) }
+            }
 
+            // ---- Avatar: glow-strip ke beech circle, neeche-right corner par
+            // chhota pencil-badge (tap karte hi gallery khul jati hai). ----
+            Box(
+                modifier = Modifier.fillMaxWidth().height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 val avatarModel = when {
                     profile.avatarUri.isEmpty() -> DEFAULT_AVATAR
                     profile.avatarUri.startsWith("http") -> profile.avatarUri
@@ -212,7 +212,7 @@ fun ProfileEditScreen(navController: NavController) {
 
                 Box(
                     modifier = Modifier
-                        .size(120.dp)
+                        .size(100.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF0d2818))
                         .clickable {
@@ -226,7 +226,7 @@ fun ProfileEditScreen(navController: NavController) {
                         model = avatarModel,
                         contentDescription = "avatar",
                         modifier = Modifier
-                            .size(if (profile.avatarUri.isEmpty()) 76.dp else 120.dp)
+                            .size(if (profile.avatarUri.isEmpty()) 64.dp else 100.dp)
                             .clip(CircleShape),
                         contentScale = if (profile.avatarUri.isEmpty()) ContentScale.Fit else ContentScale.Crop
                     )
@@ -235,8 +235,8 @@ fun ProfileEditScreen(navController: NavController) {
                 // Pencil-badge, avatar ke neeche-right corner par
                 Box(
                     modifier = Modifier
-                        .offset(x = 42.dp, y = 42.dp)
-                        .size(36.dp)
+                        .offset(x = 36.dp, y = 36.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF0d2818))
                         .border(2.dp, ProfileGreenAccent.copy(alpha = 0.7f), CircleShape)
@@ -250,7 +250,7 @@ fun ProfileEditScreen(navController: NavController) {
                     AsyncImage(
                         model = UPLOAD_PHOTO_ICON,
                         contentDescription = "edit avatar",
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -276,65 +276,78 @@ fun ProfileEditScreen(navController: NavController) {
 
             Spacer(Modifier.height(8.dp))
 
-            // ---- Username ----
-            FieldLabel("Username (0/3 times per day)")
-            FieldBox(onClick = { showNameDialog = true }) {
-                Text(
-                    profile.name,
-                    color = ProfileGreenDark,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(Modifier.height(18.dp))
-
-            // ---- Gender ----
-            FieldLabel("Gender")
-            FieldBox(onClick = { showGenderDialog = true }) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    GenderIcon(profile.gender, 20.dp)
-                    Spacer(Modifier.width(8.dp))
+            // ---- Light/mint card — reference image ke blank-panel jaisa —
+            // Username/Gender/Country/Bio sab isi ke andar, light theme mein. ----
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(CardBg)
+                    .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
+                    .padding(18.dp)
+            ) {
+                // ---- Username ----
+                CardFieldLabel("Username (0/3 times per day)")
+                CardFieldBox(onClick = { showNameDialog = true }) {
                     Text(
-                        profile.gender.replaceFirstChar { it.uppercase() },
-                        color = ProfileGreenDark,
+                        profile.name,
+                        color = CardValueColor,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
                     )
                 }
-            }
 
-            Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(16.dp))
 
-            // ---- Country ----
-            FieldLabel("Country")
-            FieldBox(onClick = { showFlagDialog = true }) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Text(profile.flagIcon, fontSize = 16.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(profile.flagName, color = ProfileGreenDark, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                // ---- Gender ----
+                CardFieldLabel("Gender")
+                CardFieldBox(onClick = { showGenderDialog = true }) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        GenderIcon(profile.gender, 20.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            profile.gender.replaceFirstChar { it.uppercase() },
+                            color = CardValueColor,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
-            }
 
-            Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(16.dp))
 
-            // ---- Bio ----
-            FieldLabel("Bio")
-            FieldBox(onClick = { showBioDialog = true }, minHeight = 140.dp, alignTop = true) {
-                Text(
-                    profile.bio.ifEmpty { "Bio is left empty" },
-                    color = if (profile.bio.isEmpty()) PlaceholderTextColor else ProfileGreenDark,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 13.sp,
-                    fontStyle = if (profile.bio.isEmpty()) FontStyle.Italic else FontStyle.Normal,
-                    modifier = Modifier.weight(1f)
-                )
+                // ---- Country ----
+                CardFieldLabel("Country")
+                CardFieldBox(onClick = { showFlagDialog = true }) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Text(profile.flagIcon, fontSize = 16.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(profile.flagName, color = CardValueColor, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // ---- Bio ----
+                CardFieldLabel("Bio")
+                CardFieldBox(onClick = { showBioDialog = true }, minHeight = 120.dp, alignTop = true) {
+                    Text(
+                        profile.bio.ifEmpty { "Bio is left empty" },
+                        color = if (profile.bio.isEmpty()) CardPlaceholderColor else CardValueColor,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 13.sp,
+                        fontStyle = if (profile.bio.isEmpty()) FontStyle.Italic else FontStyle.Normal,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             Spacer(Modifier.height(28.dp))
         }
     }
+
 
     // ---- Name modal ----
     if (showNameDialog) {
@@ -459,6 +472,43 @@ private fun FieldBox(
     }
 }
 
+// Light/mint card ke andar wali label + box variants (dark text on light bg) —
+// naye background-image design ke card ke liye.
+@Composable
+private fun CardFieldLabel(text: String) {
+    Text(
+        text,
+        color = CardLabelColor,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        modifier = Modifier.padding(bottom = 6.dp)
+    )
+}
+
+@Composable
+private fun CardFieldBox(
+    onClick: () -> Unit,
+    minHeight: androidx.compose.ui.unit.Dp = 50.dp,
+    alignTop: Boolean = false,
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = minHeight)
+            .clip(RoundedCornerShape(10.dp))
+            .background(CardFieldBoxBg)
+            .border(1.dp, CardFieldBoxBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = if (alignTop) Alignment.Top else Alignment.CenterVertically
+    ) {
+        content()
+        Text("\u276F", color = CardArrowColor, fontSize = 13.sp)
+    }
+}
+
 @Composable
 private fun TextInputDialog(
     title: String,
@@ -524,7 +574,7 @@ private fun FlagPickerDialog(onDismiss: () -> Unit, onSelect: (icon: String, nam
                         ) {
                             Text(icon, fontSize = 16.sp)
                             Spacer(Modifier.width(8.dp))
-                            Text(name, fontSize = 13.sp, color = ProfileGreenDark)
+                            Text(name, fontSize = 13.sp, color = CardValueColor)
                         }
                     }
                 }

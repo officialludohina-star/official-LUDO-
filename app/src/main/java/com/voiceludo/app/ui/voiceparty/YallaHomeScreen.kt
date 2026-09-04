@@ -137,7 +137,7 @@ fun YallaHomeScreen(navController: NavController) {
                     .padding(horizontal = 16.dp)
             ) {
                 TopBar(
-                    onAvatarClick = { navController.navigate("vp_profile_edit") },
+                    onAvatarClick = { navController.navigate("vp_profile_edit") { launchSingleTop = true } },
                     onSettingsClick = { showSettingsDialog = true }
                 )
                 Spacer(Modifier.height(6.dp))
