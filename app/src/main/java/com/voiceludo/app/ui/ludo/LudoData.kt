@@ -147,7 +147,7 @@ const val TICK_ICON = "file:///android_asset/img/tick.webp"
 const val HOT_BADGE_ICON = "file:///android_asset/img/fragment-Rule2.webp"
 const val BET_MINUS_ICON = "file:///android_asset/img/regression-coin-min-check.webp"
 const val BET_PLUS_ICON = "file:///android_asset/img/regression-coin-add-check.webp"
-const val COIN_ICON = "file:///android_asset/img/coin.webp"
+const val COIN_ICON = "file:///android_asset/img/coin-v.png"
 const val GOLDEN_DICE_ICON = "file:///android_asset/img/icon-golden-dice.webp"
 
 val BET_OPTIONS = listOf(500, 2000, 10000, 20000, 50000, 100000, 250000, 500000, 1000000, 5000000, 10000000, 20000000)
@@ -158,6 +158,13 @@ const val BET_INFO_ICON = "file:///android_asset/img/file-000000000d188208a6a8a0
 const val SOUND_ICON = "file:///android_asset/img/room-ic-input-sound.webp"
 const val SOUND_OFF_ICON = "file:///android_asset/img/room-ic-input-sound-off.webp"
 const val EXIT_ICON = "file:///android_asset/img/btn-associate-exit.webp"
+
+// Mode-select screen: "Start" button image (text already baked into the image)
+// aur mode-box (Classic/Arrow/Quick/Master) ke select/unselect backgrounds —
+// user ki di hui asal images, seedha assets se load hoti hain.
+const val START_BUTTON_IMG = "file:///android_asset/img/btn-start.png"
+const val MODE_BTN_SELECT_IMG = "file:///android_asset/img/mode-btn-select.webp"
+const val MODE_BTN_UNSELECT_IMG = "file:///android_asset/img/mode-btn-unselect.webp"
 // .game-top-icons-wrap ka background bar image (asal HTML se hoobahoo)
 const val TOP_BAR_BG_IMG = "file:///android_asset/img/IMG-20260825-WA0006.jpg"
 

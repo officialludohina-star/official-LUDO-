@@ -178,24 +178,24 @@ fun ProfileEditScreen(navController: NavController) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ---- Header: title + X (close) button ----
-            Box(modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp)) {
-                Text(
-                    "Edit Profile",
-                    color = ProfileGreenAccent,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 24.sp,
-                    modifier = Modifier.align(Alignment.Center),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+            // ---- Header: "Edit Profile" title aur X dono background image mein
+            // pehle se bane huay hain (baked-in) — is liye yahan alag se apna
+            // Text/"✕" nahi banate (warna dono doubled/overlapping dikhte thay).
+            // Sirf ek invisible tap-area rakhte hain, theek background ke X ke
+            // upar, taake woh assli (background wala) X hi tap hone par
+            // navController.popBackStack() se peechay chala jaye.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(70.dp)
+            ) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 18.dp)
-                        .size(32.dp)
-                        .clickable { navController.popBackStack() },
-                    contentAlignment = Alignment.Center
-                ) { Text("\u2715", color = ProfileGreenAccent, fontSize = 20.sp, fontWeight = FontWeight.Black) }
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
+                        .size(56.dp)
+                        .clickable { navController.popBackStack() }
+                )
             }
 
             // ---- Avatar: glow-strip ke beech circle, neeche-right corner par

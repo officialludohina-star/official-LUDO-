@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
@@ -173,22 +174,25 @@ fun LudoModeSelectScreen(navController: NavController) {
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(40.dp))
 
-            // START BUTTON
-            Box(
+            // START BUTTON — asal "Start" image (text image ke andar hi baked-in hai).
+            // aspectRatio image ke asal ratio (2172x724) ke mutabiq rakha hai taake
+            // pill squished/stretched na dikhe, aur upar wala gap barha ke thora
+            // neechay kiya hai.
+            AsyncImage(
+                model = START_BUTTON_IMG,
+                contentDescription = "Start",
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
-                    .widthIn(max = 300.dp)
+                    .widthIn(max = 260.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Brush.verticalGradient(listOf(Color(0xFFffec66), Color(0xFFffb300))))
+                    .aspectRatio(2172f / 724f)
                     .clickable { navController.navigate("ludo_matching/${mode.name}/$players/$magicOn/$betIndex") }
-                    .padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Start", color = Color(0xFF7a4a00), fontWeight = FontWeight.Black, fontSize = 22.sp)
-            }
+            )
+
+            Spacer(Modifier.height(20.dp))
         }
 
         // CLOSE BUTTON
@@ -205,11 +209,143 @@ fun LudoModeSelectScreen(navController: NavController) {
     }
 
     if (showHelp) {
-        AlertDialog(
-            onDismissRequest = { showHelp = false },
-            confirmButton = { TextButton(onClick = { showHelp = false }) { Text("OK") } },
-            text = { Text("Classic: Normal\nArrow: Fast\nQuick: Short\nMaster: Pro") }
-        )
+        RulesDialog(onDismiss = { showHelp = false })
+    }
+}
+
+// "Rules" popup — Classic tab mein user ki di hui asal English rules text hai
+// (unki screenshots se, sirf text — koi board/photo image nahi lagayi). Arrow/
+// Quick/Master ke liye abhi tak sirf short one-line summary di hui thi, wahi
+// rakhi hai kyunke unka poora rules text nahi mila.
+@Composable
+private fun RulesDialog(onDismiss: () -> Unit) {
+    var tab by remember { mutableStateOf(LudoMode.CLASSIC) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White)
+        ) {
+            // Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color(0xFF3ad9ac), Color(0xFF1a9e7a))))
+                    .padding(vertical = 18.dp)
+            ) {
+                Text(
+                    "Rules",
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 16.dp)
+                        .size(26.dp)
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center
+                ) { Text("\u2715", color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp) }
+            }
+
+            // Tabs
+            Row(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+                listOf(
+                    "Classic" to LudoMode.CLASSIC,
+                    "Arrow" to LudoMode.ARROW,
+                    "Quick" to LudoMode.QUICK,
+                    "Master" to LudoMode.MASTER
+                ).forEach { (label, m) ->
+                    val active = tab == m
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(3.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (active) Color(0xFFe2f7ef) else Color(0xFFf1f1f1))
+                            .clickable { tab = m }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            label,
+                            color = if (active) Color(0xFF1a9e7a) else Color(0xFF9a9a9a),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+
+            // Content
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                when (tab) {
+                    LudoMode.CLASSIC -> {
+                        RuleSection(
+                            "MOVING OUT OF NEST",
+                            "A takeoff will take place when you roll a six. Rolling a six also gives you an extra turn to roll the dice."
+                        )
+                        RuleSection(
+                            "WINNING THE GAME",
+                            "You win when all of your four tokens reach the end first."
+                        )
+                        RuleSection(
+                            "REWARD OF KILLING",
+                            "Tokens of different colors can kill each other. You will get an EXTRA TURN to roll the dice if you kill an opponent's token."
+                        )
+                        RuleSection(
+                            "SAFE SQUARES",
+                            "Tokens on the start squares and star squares are protected and cannot be killed."
+                        )
+                        RuleSection(
+                            "PUNISHMENT OF ROLLING THREE CONSECUTIVE SIX",
+                            "If you roll a six three times then your turn ends, remember to reset after the third time you roll a six."
+                        )
+                        RuleSection(
+                            "MOVING TO THE ENDING TRACK",
+                            "On the ending track, you can proceed only when the point is equal or is less than the distance from the end."
+                        )
+                    }
+                    LudoMode.ARROW -> RuleSection("ARROW", "Fast — tokens move quicker across the board.")
+                    LudoMode.QUICK -> RuleSection("QUICK", "Short — a reduced board for quicker matches.")
+                    LudoMode.MASTER -> RuleSection("MASTER", "Pro — the advanced ruleset for experienced players.")
+                }
+                Spacer(Modifier.height(10.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RuleSection(title: String, body: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFFe2f7ef))
+                .padding(vertical = 10.dp, horizontal = 8.dp)
+        ) {
+            Text(
+                title,
+                color = Color(0xFF14503f),
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(body, color = Color(0xFF3a4a4a), fontWeight = FontWeight.Medium, fontSize = 13.sp)
     }
 }
 
@@ -253,31 +389,28 @@ private fun LudoCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun ModeButton(label: String, active: Boolean, modifier: Modifier = Modifier, showHot: Boolean = false, onClick: () -> Unit) {
-    Box(modifier = modifier) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+    Box(modifier = modifier.clickable(onClick = onClick)) {
+        // Box ka background hi asal image hai (select image mein gold border +
+        // corner checkmark ribbon pehle se baked-in hai, unselect plain blue box) —
+        // upar sirf game ka naam likha jata hai.
+        AsyncImage(
+            model = if (active) MODE_BTN_SELECT_IMG else MODE_BTN_UNSELECT_IMG,
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    if (active) Brush.verticalGradient(listOf(Color(0xFF4ac8ff), Color(0xFF1a8aff)))
-                    else Brush.verticalGradient(listOf(Color(0xFF2a8aff), Color(0xFF1860c0)))
-                )
-                .clickable(onClick = onClick)
-                .padding(vertical = 10.dp)
-        ) {
-            if (active) {
-                AsyncImage(model = TICK_ICON, contentDescription = null, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(4.dp))
-            }
-            Text(
-                label,
-                color = if (active) Color(0xFFfffc00) else Color(0xFFcce6ff),
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 13.sp
-            )
-        }
+                .height(46.dp)
+        )
+        Text(
+            label,
+            color = if (active) Color(0xFFfff042) else Color(0xFFcfe6ff),
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(top = 2.dp)
+        )
+
         if (showHot) {
             AsyncImage(
                 model = HOT_BADGE_ICON, contentDescription = "hot",

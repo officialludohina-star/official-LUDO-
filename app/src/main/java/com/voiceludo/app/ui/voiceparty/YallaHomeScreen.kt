@@ -73,13 +73,15 @@ private fun Modifier.homeLayout(key: String): Modifier {
 }
 
 // Coins/diamonds ab bekend se aate hain (signup/login ke "auth" jawab se, aur
-// jeetne/extra-roll khareedne par "wallet" event se). Pehle yeh pill hamesha
-// hardcoded "10K" dikhata tha — asal balance se koi lena dena nahi tha. Ab
-// BackendClient ki live value use karte hain aur "10,450" jaisa pura number
-// dikhate hain (bade numbers par hi "12.4K" jaisi short form).
+// jeetne/extra-roll khareedne par "wallet" event se). 10,000 se upar amount ko
+// short form mein dikhate hain (jaise "10k", "24.5k", "1.2M") — 10,000 se neechay
+// pura number ("9,450" waghera).
 private fun formatAmount(v: Long): String = when {
     v >= 1_000_000 -> String.format("%.1fM", v / 1_000_000.0)
-    v >= 100_000 -> String.format("%.1fK", v / 1_000.0)
+    v >= 10_000 -> {
+        val k = v / 1000.0
+        if (k == k.toLong().toDouble()) "${k.toLong()}k" else String.format("%.1fk", k)
+    }
     else -> "%,d".format(v)
 }
 
@@ -269,8 +271,14 @@ private fun TopBar(onAvatarClick: () -> Unit, onSettingsClick: () -> Unit = {}) 
                 iconUrl = "file:///android_asset/img/coin-icon.webp",
                 value = formatAmount(coins),
                 valueColor = Color(0xFFffd700),
-                addBg = Color(0xFF22c55e),
-                addContent = { Text("+", color = Color(0xFF3a2500), fontWeight = FontWeight.Black, fontSize = 13.sp) }
+                addBg = Color.Transparent,
+                addContent = {
+                    AsyncImage(
+                        model = "file:///android_asset/img/plus-coin.webp",
+                        contentDescription = "add",
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             )
         }
 
@@ -301,10 +309,10 @@ private fun TopBar(onAvatarClick: () -> Unit, onSettingsClick: () -> Unit = {}) 
         )
         Spacer(Modifier.width(14.dp))
         AsyncImage(
-            model = "file:///android_asset/img/setting.png",
+            model = "file:///android_asset/img/setting-icon.webp",
             contentDescription = "settings",
             modifier = Modifier
-                .size(26.dp)
+                .size(34.dp)
                 .homeLayout("settings")
                 .clickable(onClick = onSettingsClick)
         )
