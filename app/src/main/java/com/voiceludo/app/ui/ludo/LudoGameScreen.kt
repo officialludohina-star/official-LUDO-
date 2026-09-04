@@ -87,6 +87,9 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                 is ServerMessage.OpponentProfile -> state.onOpponentProfile(msg.color, msg.name, msg.avatar)
                 is ServerMessage.TurnTimer -> state.onTurnTimer(msg.color, msg.seconds)
                 is ServerMessage.Wallet -> msg.message?.let { walletMsg = it }
+                // Roll reject ho (jaise turn already badal chuka) to dice button
+                // hamesha ke liye disabled na reh jaye — flag wapis khol dete hain.
+                is ServerMessage.Err -> state.rollRequested.value = false
                 // Apna khud ka connection toota — "Reconnecting…" overlay + 30s countdown
                 // shuru; BackendClient khud reconnect hote hi "resume" bhej dega.
                 is ServerMessage.ConnectionClosed -> state.onConnectionLost()
@@ -331,7 +334,8 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
                                 // wale branch ke andar hain, to bas isSelf + normal
                                 // game-state checks hi kaafi hain.
                                 enabled = isSelf && !state.gameOver.value &&
-                                    state.movable.isEmpty() && !state.isRolling.value && !state.isMoving.value,
+                                    state.movable.isEmpty() && !state.isRolling.value && !state.isMoving.value &&
+                                    !state.rollRequested.value,
                                 onClick = { scope.launch { state.rollDice() } }
                             )
                             // Asal HTML ke gameDiceNum_${idx} badge jaisa — is turn mein ab tak

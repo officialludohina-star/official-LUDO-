@@ -50,6 +50,12 @@ class LudoGameState(
     val diceByColor = mutableStateMapOf<LudoColor, Int>().apply { players.forEach { put(it, 1) } }
     var diceRolled = mutableStateOf(false)
     var isRolling = mutableStateOf(false)
+    // Tap se lekar server ke "dice" (ya "error") jawab tak — is dauran button
+    // ko turant dobara-tap se bachata hai. Pehle sirf isRolling par bharosa
+    // tha, jo server ka jawab aane tak false hi rehta tha — is beech tez tez
+    // tap karne se ek se zyada "roll" request chali jati thi, jisse kabhi
+    // kabhi dice ghalat/jaldi roll hone jaisa lagta tha.
+    var rollRequested = mutableStateOf(false)
     var isMoving = mutableStateOf(false)
     var movable = mutableStateListOf<Int>()
     var killerFlashPos = mutableStateOf<Int?>(null)
@@ -194,6 +200,7 @@ class LudoGameState(
             when (e.type) {
                 "dice" -> {
                     val c = e.color?.let { runCatching { LudoColor.valueOf(it) }.getOrNull() } ?: continue
+                    rollRequested.value = false
                     isRolling.value = true
                     delay(950)
                     isRolling.value = false
@@ -215,6 +222,7 @@ class LudoGameState(
                 "turn" -> {
                     val c = e.color?.let { runCatching { LudoColor.valueOf(it) }.getOrNull() }
                     if (c != null) {
+                        rollRequested.value = false
                         currentIdx.value = players.indexOf(c).coerceAtLeast(0)
                         movable.clear()
                         rollChoice.value = null
@@ -237,36 +245,38 @@ class LudoGameState(
     private suspend fun animateMove(color: LudoColor, e: GameEvent) {
         val t = tokens.getValue(color)
         if (e.tokenIndex !in t.indices) return
+        // Master mode: agar yeh ek "joint pair" ka move hai to partner token
+        // hamesha sath (usi cell par) hota hai — usay bhi primary token ke
+        // sath sath, har step par, move karwaya jayega taake dono ek sath
+        // chalte dikhein, na ke sirf tapped token move ho aur partner baad
+        // mein achanak (bina animation) snap ho jaye.
+        val partnerIdx = e.jointTokenIndex?.takeIf { it in t.indices }
+        fun setPos(pos: Int) {
+            t[e.tokenIndex] = pos
+            partnerIdx?.let { t[it] = pos }
+        }
         isMoving.value = true
 
         if (e.from == -1) {
-            t[e.tokenIndex] = 0
+            setPos(0)
             delay(230)
         } else if (e.arrowJumped) {
-            // Arrow-jump: pehle chand cells tak normal chal ke dikhao, phir jo
-            // baaki (arrow ka shortcut) hissa hai use ek hi jhatke mein "warp"
-            // karo. Pehle poori e.from..e.to range har cell se guzarti thi —
-            // arrow ke bade jump (jaise edge-arrow seedha home-stretch ke
-            // paas) ke liye yeh bohot lamba/ajeeb crawl ban jata tha.
-            val walkSteps = (e.to - e.from).coerceAtMost(3)
-            var pos = e.from
-            repeat(walkSteps) {
-                pos += 1
-                t[e.tokenIndex] = pos
-                delay(150)
-            }
-            delay(120)
-            t[e.tokenIndex] = e.to // arrow ka shortcut hissa — seedha warp
+            // Arrow-jump: token arrow-tail par pohochte hi turant udhar se
+            // ghayab ho kar seedha agay wale (arrow-head) dabbe par nazar aata
+            // hai — koi darmiyani crawl nahi (pehle chand cells chal ke phir
+            // warp karta tha, jo aadha-adhura "jump" jaisa ajeeb lagta tha).
+            delay(220)
+            setPos(e.to)
             delay(180)
         } else {
             var pos = e.from
             while (pos < e.to) {
                 pos += 1
-                t[e.tokenIndex] = pos
+                setPos(pos)
                 delay(150)
             }
         }
-        t[e.tokenIndex] = e.to
+        setPos(e.to)
         isMoving.value = false
 
         if (e.captured.isNotEmpty()) {
@@ -338,7 +348,8 @@ class LudoGameState(
     // ---- UI se call hone wale actions — sab kuch seedha bekend ko bhej dete hain ----
 
     fun rollDice() {
-        if (gameOver.value || movable.isNotEmpty() || currentColor != myColor) return
+        if (gameOver.value || movable.isNotEmpty() || currentColor != myColor || rollRequested.value) return
+        rollRequested.value = true
         BackendClient.roll()
     }
 

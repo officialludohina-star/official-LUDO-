@@ -49,7 +49,10 @@ data class GameEvent(
     val movable: List<Int> = emptyList(),
     val winner: String? = null,
     val finishOrder: List<String> = emptyList(),
-    val message: String? = null
+    val message: String? = null,
+    // Master mode: agar yeh move ek "joint pair" ka hai to backend partner
+    // token ka index bhi bhejta hai — dono tokens sath move hote hain.
+    val jointTokenIndex: Int? = null
 )
 
 data class GameSnapshot(
@@ -294,7 +297,12 @@ object BackendClient {
         send(
             JSONObject()
                 .put("type", "join")
-                .put("mode", mode)
+                // BUG FIX: LudoMode enum.name UPPERCASE deta hai ("ARROW", "QUICK",
+                // "MASTER") lekin backend sirf lowercase ("arrow","quick","master")
+                // pehchanta hai — match na hone par backend chup chaap Classic mode
+                // laga deta tha, isliye Arrow/Quick/Master ke special rules (jaise
+                // arrow-tail par extra roll) kabhi apply hi nahi ho rahe thay.
+                .put("mode", mode.lowercase())
                 .put("bet", bet)
                 .put("players", players)
                 .put("magic", magic)
@@ -477,7 +485,9 @@ object BackendClient {
                 movable = jsonArrayToIntList(e.optJSONArray("movable")),
                 winner = winner.ifBlank { null },
                 finishOrder = jsonArrayToStringList(e.optJSONArray("finishOrder")),
-                message = message.ifBlank { null }
+                message = message.ifBlank { null },
+                jointTokenIndex = if (e.has("jointTokenIndex") && !e.isNull("jointTokenIndex"))
+                    e.optInt("jointTokenIndex") else null
             )
         }
     }
