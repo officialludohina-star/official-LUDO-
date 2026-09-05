@@ -91,6 +91,19 @@ fun YallaHomeScreen(navController: NavController) {
     var showSettingsDialog by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // Level-4 badges (Unlock + Rank) ki live size/position tuning ke liye —
+    // top-right gear (⚙) dabao, [-]/[+] se adjust karo, phir jo number sahi
+    // lagay wo bata dena, permanent code mein baak diya jayega.
+    val badgePanelVisible = remember { mutableStateOf(false) }
+    val unlockW = remember { mutableStateOf(128) }
+    val unlockH = remember { mutableStateOf(72) }
+    val unlockOffX = remember { mutableStateOf(0) }
+    val unlockOffY = remember { mutableStateOf(0) }
+    val rankW = remember { mutableStateOf(160) }
+    val rankH = remember { mutableStateOf(90) }
+    val rankOffX = remember { mutableStateOf(0) }
+    val rankOffY = remember { mutableStateOf(0) }
+
     // Home khulte hi apna on-device saved naam/avatar (agar avatar pehle se
     // upload ho kar hosted URL ban chuka ho) ek dafa bekend ko sync kar dete
     // hain — taake agla match milte hi opponent ko sahi naam/DP dikhe, chahe
@@ -143,12 +156,36 @@ fun YallaHomeScreen(navController: NavController) {
                     onSettingsClick = { showSettingsDialog = true }
                 )
                 Spacer(Modifier.height(6.dp))
-                StatRow()
+                StatRow(
+                    unlockW = unlockW.value, unlockH = unlockH.value,
+                    unlockOffX = unlockOffX.value, unlockOffY = unlockOffY.value,
+                    rankW = rankW.value, rankH = rankH.value,
+                    rankOffX = rankOffX.value, rankOffY = rankOffY.value
+                )
+                if (badgePanelVisible.value) {
+                    DebugPanel(badgePanelVisible) {
+                        Text("Unlock badge", color = Color(0xFFffe066), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        DebugStepperRow("Width", unlockW, step = 2, range = 1..200)
+                        DebugStepperRow("Height", unlockH, step = 2, range = 1..200)
+                        DebugStepperRow("Left/Right", unlockOffX, step = 2, range = -200..200)
+                        DebugStepperRow("Up/Down", unlockOffY, step = 2, range = -200..200)
+                        Spacer(Modifier.height(6.dp))
+                        Text("Rank badge", color = Color(0xFF9ad6ff), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        DebugStepperRow("Width", rankW, step = 2, range = 1..200)
+                        DebugStepperRow("Height", rankH, step = 2, range = 1..200)
+                        DebugStepperRow("Left/Right", rankOffX, step = 2, range = -200..200)
+                        DebugStepperRow("Up/Down", rankOffY, step = 2, range = -200..200)
+                    }
+                }
                 Spacer(Modifier.height(28.dp))
                 ModeGrid(navController)
             }
             BottomNav()
         }
+        DebugToggleButton(
+            badgePanelVisible,
+            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 4.dp, end = 4.dp)
+        )
     }
 
     if (showSettingsDialog) {
@@ -355,25 +392,34 @@ private fun Pill(
 }
 
 @Composable
-private fun StatRow() {
+private fun StatRow(
+    unlockW: Int = 128, unlockH: Int = 72, unlockOffX: Int = 0, unlockOffY: Int = 0,
+    rankW: Int = 160, rankH: Int = 90, rankOffX: Int = 0, rankOffY: Int = 0
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start
     ) {
-        // Pehle se chhota kiya gaya aur left side ki taraf rakha gaya (fixed
-        // width, poori row stretch nahi karta) — jaisa reference screenshot mein hai.
+        // Pehle se chhota kiya gaya aur left side ki taraf rakha gaya — size/position
+        // debug panel (gear icon) se live tune kiye gaye numbers yahan baake hain.
         AsyncImage(
             model = "file:///android_asset/img/unlock_level4_badge.webp",
             contentDescription = "Unlock at Level 4",
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.width(128.dp).aspectRatio(600f / 337f)
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier
+                .width(unlockW.dp)
+                .height(unlockH.dp)
+                .offset(x = unlockOffX.dp, y = unlockOffY.dp)
         )
         Spacer(Modifier.width(8.dp))
         AsyncImage(
             model = "file:///android_asset/img/rank_level4_badge.webp",
             contentDescription = "Rank, Unlock at Level 4",
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.width(160.dp).aspectRatio(600f / 337f)
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier
+                .width(rankW.dp)
+                .height(rankH.dp)
+                .offset(x = rankOffX.dp, y = rankOffY.dp)
         )
     }
 }
