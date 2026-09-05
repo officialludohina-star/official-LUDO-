@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,6 +20,8 @@ import com.voiceludo.app.net.SessionStore
 import com.voiceludo.app.ui.common.LoadingOverlay
 import com.voiceludo.app.ui.ludo.NO_CONNECTION_ICON
 import kotlinx.coroutines.delay
+
+private const val LOGIN_BG = "file:///android_asset/img/login_bg.png"
 
 // Ab REAL bekend (BackendClient.login) se login hota hai — koi local/fake
 // account-check nahi. Bekend ka apna account (email + bcrypt password) hi
@@ -85,7 +88,15 @@ fun GmailLoginScreen(navController: NavController) {
         onDispose { BackendClient.removeListener(listener) }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0e0e14))) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = LOGIN_BG,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center

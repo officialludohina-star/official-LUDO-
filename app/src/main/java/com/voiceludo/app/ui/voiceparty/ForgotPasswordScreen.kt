@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.EmailService
 import com.voiceludo.app.net.ServerMessage
@@ -26,6 +28,8 @@ import com.voiceludo.app.net.SessionStore
 import com.voiceludo.app.ui.common.LoadingOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private const val JUNGLE_MOON_BG = "file:///android_asset/img/login_bg.png"
 
 // "Forgot Password?" ka asal, kaam karne wala flow — GmailSignupScreen jaisa
 // hi real EmailJS OTP use karta hai (koi fake bypass nahi), aur verify hone
@@ -79,7 +83,15 @@ fun ForgotPasswordScreen(navController: NavController) {
         onDispose { BackendClient.removeListener(listener) }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0e0e14))) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = JUNGLE_MOON_BG,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center

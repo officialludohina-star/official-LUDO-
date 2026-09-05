@@ -7,15 +7,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.voiceludo.app.net.EmailService
+
+private const val SIGNUP_BG = "file:///android_asset/img/login_bg.png"
 
 @Composable
 fun GmailSignupScreen(navController: NavController) {
@@ -29,7 +33,15 @@ fun GmailSignupScreen(navController: NavController) {
     var errorText by remember { mutableStateOf("") }
     var sendingEmail by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0e0e14))) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = SIGNUP_BG,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center
