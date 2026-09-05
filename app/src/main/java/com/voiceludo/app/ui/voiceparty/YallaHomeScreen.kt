@@ -95,12 +95,12 @@ fun YallaHomeScreen(navController: NavController) {
     // top-right gear (⚙) dabao, [-]/[+] se adjust karo, phir jo number sahi
     // lagay wo bata dena, permanent code mein baak diya jayega.
     val badgePanelVisible = remember { mutableStateOf(false) }
-    val unlockW = remember { mutableStateOf(128) }
-    val unlockH = remember { mutableStateOf(72) }
-    val unlockOffX = remember { mutableStateOf(0) }
+    val unlockW = remember { mutableStateOf(164) }
+    val unlockH = remember { mutableStateOf(76) }
+    val unlockOffX = remember { mutableStateOf(-14) }
     val unlockOffY = remember { mutableStateOf(0) }
-    val rankW = remember { mutableStateOf(160) }
-    val rankH = remember { mutableStateOf(90) }
+    val rankW = remember { mutableStateOf(164) }
+    val rankH = remember { mutableStateOf(76) }
     val rankOffX = remember { mutableStateOf(0) }
     val rankOffY = remember { mutableStateOf(0) }
 
@@ -393,8 +393,8 @@ private fun Pill(
 
 @Composable
 private fun StatRow(
-    unlockW: Int = 128, unlockH: Int = 72, unlockOffX: Int = 0, unlockOffY: Int = 0,
-    rankW: Int = 160, rankH: Int = 90, rankOffX: Int = 0, rankOffY: Int = 0
+    unlockW: Int = 164, unlockH: Int = 76, unlockOffX: Int = -14, unlockOffY: Int = 0,
+    rankW: Int = 164, rankH: Int = 76, rankOffX: Int = 0, rankOffY: Int = 0
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
