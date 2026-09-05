@@ -1,5 +1,8 @@
 package com.voiceludo.app.ui.ludo
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
@@ -28,9 +31,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,12 +117,13 @@ private val CENTER_ARROW_SPOTS = listOf(
     ArrowSpot(32.0f, 52.0f, 15.0f, 180f)
 )
 
-// Quick/Master mode ke 4 block-cell icons
+// Quick/Master mode ke 4 block-cell icons (panel se test kiya hua final: size +8,
+// left/right -4, up/down 0 — ab permanent bake, panel hata diya gaya hai)
 private val BLOCK_ICON_SPOTS = listOf(
-    ArrowSpot(42.6f, -1f, 15f, 0f),
-    ArrowSpot(3f, 39.6f, 14f, 271f),
-    ArrowSpot(82.2f, 38.6f, 15f, 89f),
-    ArrowSpot(42.6f, 79.2f, 15f, 0f)
+    ArrowSpot(38.6f, -1f, 23f, 0f),
+    ArrowSpot(-1f, 39.6f, 22f, 271f),
+    ArrowSpot(78.2f, 38.6f, 23f, 89f),
+    ArrowSpot(38.6f, 79.2f, 23f, 0f)
 )
 
 // Ek path token (ring ya stretch par) ka poora record — render se pehle group/stack
@@ -430,7 +436,11 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                     state.currentColor == state.myColor &&
                     !state.isMoving.value &&
                     t.idx in state.movable
-                val isCurrentTurn = t.color == state.currentColor
+                // Ab yeh ring sirf usi player ko, aur sirf tab nazar aati hai
+                // jab dice roll ho chuka ho aur movable set aa chuki ho (yani
+                // ab wahi lamha hai jab token choose karna hai) — roll se pehle
+                // poori turn mein glow/ring bilkul nahi dikhti.
+                val isCurrentTurn = t.color == state.currentColor && t.color == state.myColor && state.movable.isNotEmpty()
 
                 // key(color, idx) — token ki asal "identity" (color+idx) se bandha hua
                 // animation-state, iske bagair jab tokens yard se nikalte ya kisi cell
@@ -438,13 +448,26 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                 // purana animateDpAsState reuse kar leta tha, jis se token ki position
                 // baar-baar idhar-udhar "jump/change" hoti dikhti thi.
                 key(t.color, t.idx) {
-                    val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "tokenX")
-                    val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(230), label = "tokenY")
+                    val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(190), label = "tokenX")
+                    val animY by animateDpAsState(targetValue = targetY, animationSpec = tween(190), label = "tokenY")
+                    // Real board-game token jaisa "hop" — har cell-step par token
+                    // seedha slide karne ki jagah thora upar uchal kar neeche
+                    // aata hai (asal Ludo goti chalne jaisa feel), sirf jab
+                    // token abhi move ho raha ho.
+                    val hop = remember { Animatable(0f) }
+                    LaunchedEffect(targetX, targetY) {
+                        if (state.isMoving.value) {
+                            hop.snapTo(0f)
+                            hop.animateTo(1f, tween(95, easing = LinearOutSlowInEasing))
+                            hop.animateTo(0f, tween(95, easing = FastOutLinearInEasing))
+                        }
+                    }
+                    val hopDy = -(tokenSizeDp * 0.32f) * hop.value
 
                     BoxTokenWithGlow(
                         tokenSizeDp = tokenSizeDp,
                         animX = animX,
-                        animY = animY,
+                        animY = animY + hopDy,
                         isMovable = isMovable,
                         isCurrentTurn = isCurrentTurn,
                         tokenColor = t.color,
@@ -481,7 +504,12 @@ fun LudoBoardCanvas(state: LudoGameState, onTokenTap: (LudoColor, Int) -> Unit) 
                 // tarike se kaam karta tha: jis ki bhi bari ho uske SAARE tokens
                 // par ring aati (chahe wo abhi movable ho ya na ho). Ab yard
                 // tokens ko bhi wahi consistent rule di hai.
-                val isCurrentTurnYard = color == state.currentColor
+                //
+                // PRIVACY + TIMING: ab yeh ring sirf apne hi tokens par, sirf
+                // apni bari mein, aur sirf roll ho chuke hone ke baad (jab
+                // movable list aa chuki ho, yani token choose karna ho) nazar
+                // aati hai — dice roll hone se pehle koi glow nahi dikhti.
+                val isCurrentTurnYard = color == state.currentColor && color == state.myColor && state.movable.isNotEmpty()
 
                 key(color, i) {
                     val animX by animateDpAsState(targetValue = targetX, animationSpec = tween(230), label = "yardTokenX")

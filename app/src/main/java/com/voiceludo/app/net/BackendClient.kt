@@ -169,6 +169,17 @@ object BackendClient {
         return m
     }
 
+    // Opponent ka naam/DP "opponentProfile" event se seedha yahan bhi cache ho
+    // jata hai (color -> latest OpponentProfile), chahe Game screen abhi tak
+    // apna listener attach kar hi na paya ho. Isse woh "kabhi load hi nahi
+    // hoti" wali race khatam ho jati hai — jab bhi Game screen mount ho, yeh
+    // pehle se aaya hua data foran consume kar leti hai (dekho
+    // consumeCachedOpponentProfiles neeche).
+    private val opponentProfileCache = mutableMapOf<String, ServerMessage.OpponentProfile>()
+    fun consumeCachedOpponentProfiles(): List<ServerMessage.OpponentProfile> =
+        opponentProfileCache.values.toList()
+    fun clearOpponentProfileCache() { opponentProfileCache.clear() }
+
     // inGame — jab tak yeh true hai, agar socket kabhi bhi (net jaane se) toot
     // kar wapis khule to onOpen khud "resume" bhej deta hai (naya login/signup
     // nahi maangta). "matched"/"resumed" par true hota hai, leaveRoom() ya
@@ -190,6 +201,9 @@ object BackendClient {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun notify(msg: ServerMessage) {
+        if (msg is ServerMessage.OpponentProfile) {
+            opponentProfileCache[msg.color] = msg
+        }
         mainHandler.post {
             listeners.forEach { it(msg) }
         }
@@ -294,6 +308,7 @@ object BackendClient {
     }
 
     fun join(mode: String, bet: Int, players: Int, magic: Boolean) {
+        clearOpponentProfileCache()
         send(
             JSONObject()
                 .put("type", "join")

@@ -4,30 +4,28 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
 // Same jungle/moon background as rest of app
-private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
-private const val FB_ICON   = "https://i.postimg.cc/tR2tPz7G/bind-f-1c2b455.png"
-private const val GMAIL_ICON = "https://i.postimg.cc/63KLVjdr/bind-e-e8c989f.png"
+private const val LOGIN_BG = "file:///android_asset/img/login_bg.png"
+private const val FB_ICON   = "file:///android_asset/img/facebook_login_btn.png"
+private const val GMAIL_ICON = "file:///android_asset/img/gmail_login_btn.png"
 
 // Panel se test kiye gaye final numbers — ab permanent bake kar diye.
-private const val FB_WIDTH = 304
+// (Width naye button images ke asal aspect-ratio se match ki gayi hai.)
+private const val FB_WIDTH = 312
 private const val FB_HEIGHT = 64
 private const val FB_OFFSET_X = 0
 private const val FB_OFFSET_Y = 4
-private const val GMAIL_WIDTH = 316
+private const val GMAIL_WIDTH = 299
 private const val GMAIL_HEIGHT = 68
 private const val GMAIL_OFFSET_X = 0
 private const val GMAIL_OFFSET_Y = 0
@@ -95,19 +93,14 @@ private fun BigIconLoginButton(
             .clip(RoundedCornerShape(50))
             .clickable(onClick = onClick)
     ) {
-        // Icon ka apna asal color/design hi poore button ka background banta hai — koi extra color nahi
+        // Naye button images (Login with Gmail / Login with Facebook) mein text
+        // pehle se bana hua hai, is liye alag se Text() draw karne ki zaroorat nahi —
+        // sirf poori image Fit se dikha dete hain taake text kabhi crop na ho.
         AsyncImage(
             model = iconUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            alignment = Alignment.CenterStart,
+            contentDescription = label,
+            contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
-        )
-        Text(
-            text = label,
-            color = Color.White,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 18.sp
         )
     }
 }

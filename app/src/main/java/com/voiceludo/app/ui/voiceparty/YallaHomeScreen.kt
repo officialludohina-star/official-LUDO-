@@ -36,7 +36,7 @@ import com.voiceludo.app.net.SessionStore
 // Asal HTML (#yallaHome) ka poora lobby screen — topbar (avatar/coins/gems/shop/settings),
 // league-rank locked cards, mode grid (2&4 Players / Team), bottom nav (Events/Battle/Chat/Social).
 // Sab image assets wahi postimg.cc links hain jo index.html mein the, taake look bilkul match kare.
-private const val HOME_BG_IMG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
+private const val HOME_BG_IMG = "file:///android_asset/img/lobby_bg.png"
 private const val NAV_GLOW_IMG = "file:///android_asset/img/selected-light-green-glow-transparent.png"
 private const val PILL_BG_IMG = "file:///android_asset/img/bg-add-coin.png"
 

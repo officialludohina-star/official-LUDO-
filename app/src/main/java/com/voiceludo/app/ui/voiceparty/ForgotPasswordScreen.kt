@@ -32,7 +32,7 @@ import com.voiceludo.app.ui.common.LoadingOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val JUNGLE_MOON_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
+private const val JUNGLE_MOON_BG = "file:///android_asset/img/login_bg.png"
 
 // "Forgot Password?" ka asal, kaam karne wala flow — GmailSignupScreen jaisa
 // hi real EmailJS OTP use karta hai (koi fake bypass nahi), aur verify hone

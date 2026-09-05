@@ -30,7 +30,7 @@ import com.voiceludo.app.net.SessionStore
 import com.voiceludo.app.ui.common.LoadingOverlay
 
 // Same jungle/moon background jo baaki saari screens (Login, Sign Up, Home) mein use hoti hai
-private const val JUNGLE_MOON_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
+private const val JUNGLE_MOON_BG = "file:///android_asset/img/login_bg.png"
 
 // Asal HTML ke "setPass" screen jaisa hi — naya password set karke account banata hai.
 // method=="gmail" ho to ab REAL bekend (BackendClient.signup) par account banta hai —

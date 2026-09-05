@@ -19,7 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.voiceludo.app.net.EmailService
 
-private const val SIGNUP_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
+private const val SIGNUP_BG = "file:///android_asset/img/login_bg.png"
 private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA0012.jpg"
 private const val OBTAIN_BUTTON = "https://i.postimg.cc/dtgJcnTx/IMG-20260831-WA0016.jpg"
 private const val CONFIRM_BUTTON = "https://i.postimg.cc/zf7mvk3P/IMG-20260831-WA0017.jpg"

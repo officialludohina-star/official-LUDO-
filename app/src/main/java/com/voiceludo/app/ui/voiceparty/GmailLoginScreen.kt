@@ -25,7 +25,7 @@ import com.voiceludo.app.ui.common.LoadingOverlay
 import com.voiceludo.app.ui.ludo.NO_CONNECTION_ICON
 import kotlinx.coroutines.delay
 
-private const val LOGIN_BG = "file:///android_asset/img/file-0000000097f0820b81bc2995a995177d.png"
+private const val LOGIN_BG = "file:///android_asset/img/login_bg.png"
 private const val EMAIL_ICON = "https://i.postimg.cc/T29TPStz/IMG-20260831-WA0012.jpg"
 private const val LOGIN_BUTTON = "https://i.postimg.cc/PqgDL1c1/IMG-20260831-WA0014.jpg"
 

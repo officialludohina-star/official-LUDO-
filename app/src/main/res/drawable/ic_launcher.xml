@@ -1,12 +1,12 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#0a2f1a"
-        android:pathData="M0,0h108v108h-108z" />
-    <path
-        android:fillColor="#FFD700"
-        android:pathData="M54,24 L64,44 L86,44 L68,58 L76,80 L54,66 L32,80 L40,58 L22,44 L44,44 Z" />
-</vector>
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Yeh file jaan-boojh kar delete nahi ki gayi — phone ka sync tool
+    deletions ko GitHub tak push nahi kar pa raha tha, is liye ic_launcher.xml
+    aur ic_launcher.png dono GitHub par ikathay reh jate thay ("Duplicate
+    resources" error). Ab dono ka naam alag hai (is xml ka naam "ic_launcher",
+    asal image ka naam "ic_launcher_img"), is liye koi conflict nahi hoga,
+    delete ki zaroorat hi khatam ho gayi.
+-->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/ic_launcher_img"
+    android:gravity="fill" />

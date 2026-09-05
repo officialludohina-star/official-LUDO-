@@ -1,7 +1,0 @@
-build/
-.dart_tool/
-.gradle/
-.idea/
-.vscode/
-*.apk
-.env

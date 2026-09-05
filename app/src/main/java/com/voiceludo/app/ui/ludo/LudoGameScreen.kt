@@ -72,6 +72,17 @@ fun LudoGameScreen(navController: NavController, mode: String, players: Int, mag
     }
     val totalPool = matched.bet * players
 
+    // Naye listener ke attach hone se PEHLE hi agar opponent ka naam/DP aa
+    // chuka ho (race condition — "matched" ke turant baad "opponentProfile"
+    // event, is screen ke apna listener lagane se pehle hi aa jaye), to woh
+    // yahan cache se foran uthaya jata hai — isi wajah se pehle kabhi-kabhi
+    // DP/naam poori game mein kabhi load hi nahi hota tha.
+    LaunchedEffect(matched) {
+        BackendClient.consumeCachedOpponentProfiles().forEach { p ->
+            state.onOpponentProfile(p.color, p.name, p.avatar)
+        }
+    }
+
     // Server se aane wale "events"/"opponentLeft" is room ke liye yahan process hote
     // hain, aur screen se nikalte hi room chhod diya jata hai (koi fake bot ab
     // takeover nahi karta jaisa pehle local sim mein hota tha).
@@ -636,7 +647,10 @@ private fun PlayerProfileBox(
                 }
             }
             AsyncImage(
-                model = avatarUrl ?: DEFAULT_AVATAR_IMG,
+                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(avatarUrl ?: DEFAULT_AVATAR_IMG)
+                    .crossfade(250)
+                    .build(),
                 contentDescription = name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -660,12 +674,16 @@ private fun PlayerProfileBox(
         Text(
             name,
             color = Color.White,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 5.dp).width(66.dp)
+            modifier = Modifier
+                .padding(top = 5.dp)
+                .width(66.dp)
+                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 4.dp, vertical = 1.dp)
         )
     }
 }
