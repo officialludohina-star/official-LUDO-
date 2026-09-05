@@ -360,30 +360,18 @@ private fun StatRow() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF3a2a0a), Color(0xFF8a5a10))))
-                .padding(horizontal = 10.dp, vertical = 8.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text("\uD83D\uDD12", fontSize = 24.sp)
-                Text("Unlock at\nLevel 4", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, textAlign = TextAlign.Center)
-            }
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF0a2a3a), Color(0xFF106a8a))))
-                .padding(horizontal = 10.dp, vertical = 8.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text("Rank\nUnlock at Level 4", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, textAlign = TextAlign.Center)
-                Text("\uD83C\uDF0E", fontSize = 24.sp)
-            }
-        }
+        AsyncImage(
+            model = "file:///android_asset/img/unlock_level4_badge.webp",
+            contentDescription = "Unlock at Level 4",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.weight(1f)
+        )
+        AsyncImage(
+            model = "file:///android_asset/img/rank_level4_badge.webp",
+            contentDescription = "Rank, Unlock at Level 4",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
