@@ -91,19 +91,6 @@ fun YallaHomeScreen(navController: NavController) {
     var showSettingsDialog by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    // Level-4 badges (Unlock + Rank) ki live size/position tuning ke liye —
-    // top-right gear (⚙) dabao, [-]/[+] se adjust karo, phir jo number sahi
-    // lagay wo bata dena, permanent code mein baak diya jayega.
-    val badgePanelVisible = remember { mutableStateOf(false) }
-    val unlockW = remember { mutableStateOf(164) }
-    val unlockH = remember { mutableStateOf(76) }
-    val unlockOffX = remember { mutableStateOf(-14) }
-    val unlockOffY = remember { mutableStateOf(0) }
-    val rankW = remember { mutableStateOf(164) }
-    val rankH = remember { mutableStateOf(76) }
-    val rankOffX = remember { mutableStateOf(0) }
-    val rankOffY = remember { mutableStateOf(0) }
-
     // Home khulte hi apna on-device saved naam/avatar (agar avatar pehle se
     // upload ho kar hosted URL ban chuka ho) ek dafa bekend ko sync kar dete
     // hain — taake agla match milte hi opponent ko sahi naam/DP dikhe, chahe
@@ -156,36 +143,12 @@ fun YallaHomeScreen(navController: NavController) {
                     onSettingsClick = { showSettingsDialog = true }
                 )
                 Spacer(Modifier.height(6.dp))
-                StatRow(
-                    unlockW = unlockW.value, unlockH = unlockH.value,
-                    unlockOffX = unlockOffX.value, unlockOffY = unlockOffY.value,
-                    rankW = rankW.value, rankH = rankH.value,
-                    rankOffX = rankOffX.value, rankOffY = rankOffY.value
-                )
-                if (badgePanelVisible.value) {
-                    DebugPanel(badgePanelVisible) {
-                        Text("Unlock badge", color = Color(0xFFffe066), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        DebugStepperRow("Width", unlockW, step = 2, range = 1..200)
-                        DebugStepperRow("Height", unlockH, step = 2, range = 1..200)
-                        DebugStepperRow("Left/Right", unlockOffX, step = 2, range = -200..200)
-                        DebugStepperRow("Up/Down", unlockOffY, step = 2, range = -200..200)
-                        Spacer(Modifier.height(6.dp))
-                        Text("Rank badge", color = Color(0xFF9ad6ff), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        DebugStepperRow("Width", rankW, step = 2, range = 1..200)
-                        DebugStepperRow("Height", rankH, step = 2, range = 1..200)
-                        DebugStepperRow("Left/Right", rankOffX, step = 2, range = -200..200)
-                        DebugStepperRow("Up/Down", rankOffY, step = 2, range = -200..200)
-                    }
-                }
+                StatRow()
                 Spacer(Modifier.height(28.dp))
                 ModeGrid(navController)
             }
             BottomNav()
         }
-        DebugToggleButton(
-            badgePanelVisible,
-            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 4.dp, end = 4.dp)
-        )
     }
 
     if (showSettingsDialog) {
@@ -393,8 +356,8 @@ private fun Pill(
 
 @Composable
 private fun StatRow(
-    unlockW: Int = 164, unlockH: Int = 76, unlockOffX: Int = -14, unlockOffY: Int = 0,
-    rankW: Int = 164, rankH: Int = 76, rankOffX: Int = 0, rankOffY: Int = 0
+    unlockW: Int = 160, unlockH: Int = 76, unlockOffX: Int = -16, unlockOffY: Int = 2,
+    rankW: Int = 180, rankH: Int = 76, rankOffX: Int = 0, rankOffY: Int = 0
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
