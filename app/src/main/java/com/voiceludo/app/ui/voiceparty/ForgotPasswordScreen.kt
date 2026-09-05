@@ -4,9 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -14,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,7 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.voiceludo.app.net.BackendClient
 import com.voiceludo.app.net.EmailService
 import com.voiceludo.app.net.ServerMessage
@@ -31,8 +26,6 @@ import com.voiceludo.app.net.SessionStore
 import com.voiceludo.app.ui.common.LoadingOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-private const val JUNGLE_MOON_BG = "file:///android_asset/img/login_bg.png"
 
 // "Forgot Password?" ka asal, kaam karne wala flow — GmailSignupScreen jaisa
 // hi real EmailJS OTP use karta hai (koi fake bypass nahi), aur verify hone
@@ -86,26 +79,14 @@ fun ForgotPasswordScreen(navController: NavController) {
         onDispose { BackendClient.removeListener(listener) }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AsyncImage(
-            model = JUNGLE_MOON_BG,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.18f)))
-
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0e0e14))) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center
         ) {
-            LoginHeaderBar(
-                "Forgot Password",
-                headerColor = Color(0xFF2ea87f),
-                useBackArrow = true
-            ) { navController.popBackStack() }
+            AuthPopupHeader("Forgot Password", onClose = { navController.popBackStack() })
 
-            LoginCard {
+            AuthPopupCard {
                 if (done) {
                     Text(
                         "\u2705 Password Updated!",
@@ -119,15 +100,18 @@ fun ForgotPasswordScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
                     )
                     Spacer(Modifier.height(20.dp))
-                    Button(
+                    AuthGoldButton(
+                        text = "Continue",
                         onClick = { navController.popBackStack("vp_home", inclusive = false) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0a7a42)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(46.dp)
-                    ) { Text("Continue", color = Color.White, fontWeight = FontWeight.Bold) }
+                        modifier = Modifier.fillMaxWidth().height(50.dp)
+                    )
                 } else if (step == 1) {
-                    RealInput(
-                        email, { email = it; errorText = "" }, "Enter email address"
+                    AuthLabeledField(
+                        glyph = "\u2709\uFE0F",
+                        label = "Email",
+                        value = email,
+                        onValueChange = { email = it; errorText = "" },
+                        placeholder = "Enter email address"
                     )
                     Spacer(Modifier.height(14.dp))
                     Row(
@@ -140,7 +124,10 @@ fun ForgotPasswordScreen(navController: NavController) {
                             modifier = Modifier.weight(1f)
                         )
                         if (secondsLeft == 0) {
-                            Button(
+                            AuthGoldButton(
+                                text = "Obtain",
+                                fontSize = 14,
+                                loading = sendingEmail,
                                 onClick = {
                                     if (email.isBlank()) {
                                         errorText = "Please enter your email address."
@@ -161,17 +148,8 @@ fun ForgotPasswordScreen(navController: NavController) {
                                         }
                                     }
                                 },
-                                enabled = !sendingEmail,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFbdbdbd)),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.height(44.dp)
-                            ) {
-                                if (sendingEmail) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFF3a3a3a), strokeWidth = 2.dp)
-                                } else {
-                                    Text("Obtain", color = Color(0xFF3a3a3a), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                }
-                            }
+                                modifier = Modifier.width(84.dp).height(44.dp)
+                            )
                         } else {
                             Text(
                                 "${secondsLeft}s",
@@ -203,7 +181,8 @@ fun ForgotPasswordScreen(navController: NavController) {
                     }
 
                     Spacer(Modifier.height(20.dp))
-                    Button(
+                    AuthGoldButton(
+                        text = "Confirm",
                         onClick = {
                             when {
                                 email.isBlank() -> errorText = "Please enter your email address."
@@ -211,10 +190,8 @@ fun ForgotPasswordScreen(navController: NavController) {
                                 else -> { errorText = ""; step = 2 }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0a7a42)),
-                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
-                    ) { Text("Confirm", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                    )
                 } else {
                     // Step 2 — naya password
                     OutlinedTextField(
@@ -254,7 +231,10 @@ fun ForgotPasswordScreen(navController: NavController) {
                     }
 
                     Spacer(Modifier.height(20.dp))
-                    Button(
+                    AuthGoldButton(
+                        text = "Update Password",
+                        enabled = !loading,
+                        loading = loading,
                         onClick = {
                             when {
                                 newPass.length < 6 -> errorText = "Password kam se kam 6 characters ka ho."
@@ -265,17 +245,8 @@ fun ForgotPasswordScreen(navController: NavController) {
                                 }
                             }
                         },
-                        enabled = !loading,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFbdbdbd)),
-                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(50.dp)
-                    ) {
-                        if (loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color(0xFF3a3a3a), strokeWidth = 2.dp)
-                        } else {
-                            Text("Update Password", color = Color(0xFF3a3a3a), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-                    }
+                    )
                 }
             }
         }

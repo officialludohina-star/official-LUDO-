@@ -1,11 +1,14 @@
 package com.voiceludo.app.ui.voiceparty
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -19,6 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -257,6 +262,143 @@ fun EyeToggleIcon(visible: Boolean, modifier: Modifier = Modifier) {
         }
     }
 }
+
+// ================= NAYA POPUP DESIGN (Login / Sign Up / Forgot Password) =================
+// User ki bheji hui screenshots jaisa — purple/gold banner header, teal-bordered
+// mint card, teal icon+label field, gold gradient button. Sab kuch native Compose
+// drawing (Canvas/gradient/border) se bana hai — koi image, URL ya base64 nahi.
+
+private val AuthGoldLight = Color(0xFFFFE08A)
+private val AuthGold = Color(0xFFF3B93A)
+private val AuthGoldDark = Color(0xFFC9861A)
+private val AuthPurpleTop = Color(0xFF6B2FA0)
+private val AuthPurpleBottom = Color(0xFF2C0A52)
+private val AuthTealLight = Color(0xFF3FD9B0)
+private val AuthTealDark = Color(0xFF0E7A57)
+private val AuthCardBg = Color(0xFFEAFBF6)
+private val AuthCardBorderTop = Color(0xFF8FF0D2)
+private val AuthCardBorderBottom = Color(0xFF0E8A63)
+
+// Banner ka trapezoid shape (upar chaura, niche thoda sankra) — Path se draw hota hai.
+private fun bannerPath(width: Float, height: Float): Path {
+    val notchTop = width * 0.20f
+    val notchBottom = width * 0.10f
+    return Path().apply {
+        moveTo(notchTop, 0f)
+        lineTo(width - notchTop, 0f)
+        lineTo(width - notchBottom, height)
+        lineTo(notchBottom, height)
+        close()
+    }
+}
+
+@Composable
+fun AuthPopupHeader(title: String, onClose: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth().height(70.dp)) {
+        Canvas(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(0.82f).height(58.dp)) {
+            val path = bannerPath(size.width, size.height)
+            drawPath(path, brush = Brush.verticalGradient(listOf(AuthPurpleTop, AuthPurpleBottom)))
+            drawPath(path, color = AuthGold, style = Stroke(width = 6f))
+        }
+        Text(
+            title,
+            color = Color.White,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 22.sp,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 14.dp)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = (-2).dp, y = 2.dp)
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(Brush.verticalGradient(listOf(AuthTealLight, AuthTealDark)))
+                .border(3.dp, AuthGold, CircleShape)
+                .clickable(onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) { Text("\u2715", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+    }
+}
+
+@Composable
+fun AuthPopupCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(AuthCardBg)
+            .border(
+                width = 3.dp,
+                brush = Brush.verticalGradient(listOf(AuthCardBorderTop, AuthCardBorderBottom)),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .padding(horizontal = 18.dp, vertical = 22.dp),
+        content = content
+    )
+}
+
+// Teal icon+label box (Email/Password) seedha input field ke sath jura hua —
+// screenshot mein jaisa dikhta hai waisa hi, emoji glyph use kiya hai (koi image nahi).
+@Composable
+fun AuthLabeledField(
+    glyph: String,
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    isPassword: Boolean = false
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .height(52.dp)
+                .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp, topEnd = 4.dp, bottomEnd = 4.dp))
+                .background(Brush.verticalGradient(listOf(AuthTealLight, AuthTealDark)))
+                .padding(horizontal = 12.dp)
+        ) {
+            Text(glyph, fontSize = 17.sp)
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+        }
+        RealInput(
+            value, onValueChange, placeholder, isPassword = isPassword,
+            modifier = Modifier.weight(1f).height(52.dp)
+        )
+    }
+}
+
+// Gold gradient button — "Login" / "Confirm" / "Obtain" sab isi se banta hai.
+@Composable
+fun AuthGoldButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    fontSize: Int = 18
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (enabled) Brush.verticalGradient(listOf(AuthGoldLight, AuthGold, AuthGoldDark))
+                else Brush.verticalGradient(listOf(Color(0xFFdadada), Color(0xFFbdbdbd)))
+            )
+            .border(2.dp, if (enabled) AuthGoldDark else Color(0xFF9e9e9e), RoundedCornerShape(14.dp))
+            .clickable(enabled = enabled && !loading, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (loading) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color(0xFF6b4a00), strokeWidth = 2.dp)
+        } else {
+            Text(text, color = Color(0xFF6b4a00), fontWeight = FontWeight.ExtraBold, fontSize = fontSize.sp)
+        }
+    }
+}
+// =====================================================================
 
 @Composable
 fun LinkRow(leftText: String, rightText: String, onLeft: () -> Unit, onRight: () -> Unit) {
