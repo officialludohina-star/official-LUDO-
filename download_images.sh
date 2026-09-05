@@ -5,6 +5,7 @@
 #   bash download_images.sh
 set +e
 OUT="app/src/main/assets/img"
+curl -sL --retry 3 -o "$OUT/game-bg.webp" "https://i.postimg.cc/qBFGBCmF/game-bg.webp"
 mkdir -p "$OUT"
 curl -sL --retry 3 -o "$OUT/shop-cart.png" "https://i.postimg.cc/25MSqCsp/shop-cart.png"
 curl -sL --retry 3 -o "$OUT/Chat.png" "https://i.postimg.cc/3N3069rb/Chat.png"
@@ -12,7 +13,6 @@ curl -sL --retry 3 -o "$OUT/file-00000000229c81fd83b90d22a29f7bba.png" "https://
 curl -sL --retry 3 -o "$OUT/regression-coin-min-uncheck.webp" "https://i.postimg.cc/4dVpVyqR/regression-coin-min-uncheck.webp"
 curl -sL --retry 3 -o "$OUT/golden-dice-big.webp" "https://i.postimg.cc/4yRBqv5L/golden-dice-big.webp"
 curl -sL --retry 3 -o "$OUT/btn-associate-exit.webp" "https://i.postimg.cc/5NSyvLtn/btn-associate-exit.webp"
-curl -sL --retry 3 -o "$OUT/game-bg.png" "https://i.postimg.cc/7PNMr2g7/game-bg.png"
 curl -sL --retry 3 -o "$OUT/file-00000000dc8082118a379ac2ac711ac3.png" "https://i.postimg.cc/7hXMvxGY/file-00000000dc8082118a379ac2ac711ac3.png"
 curl -sL --retry 3 -o "$OUT/regression-coin-min-check.webp" "https://i.postimg.cc/8CFRktbs/regression-coin-min-check.webp"
 curl -sL --retry 3 -o "$OUT/room-ic-input-sound-off.webp" "https://i.postimg.cc/90GMLqY2/room-ic-input-sound-off.webp"
@@ -50,7 +50,6 @@ curl -sL --retry 3 -o "$OUT/room-icon-rank-crown.webp" "https://i.postimg.cc/mkr
 curl -sL --retry 3 -o "$OUT/room-ic-input-sound.webp" "https://i.postimg.cc/mr5tk4rG/room-ic-input-sound.webp"
 curl -sL --retry 3 -o "$OUT/1000101592-removebg-preview.png" "https://i.postimg.cc/mrRbn4Gc/1000101592-removebg-preview.png"
 curl -sL --retry 3 -o "$OUT/piece-yellow.webp" "https://i.postimg.cc/nVNwR5tV/piece-yellow.webp"
-curl -sL --retry 3 -o "$OUT/game-bg.webp" "https://i.postimg.cc/qBFGBCmF/game-bg.webp"
 curl -sL --retry 3 -o "$OUT/bg-add-coin.png" "https://i.postimg.cc/rmqRyVxq/bg-add-coin.png"
 curl -sL --retry 3 -o "$OUT/piece-green.webp" "https://i.postimg.cc/sXXpsV5G/piece-green.webp"
 curl -sL --retry 3 -o "$OUT/coin.webp" "https://i.postimg.cc/sx3GWc56/coin.webp"

@@ -358,19 +358,22 @@ private fun Pill(
 private fun StatRow() {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.Start
     ) {
+        // Pehle se chhota kiya gaya aur left side ki taraf rakha gaya (fixed
+        // width, poori row stretch nahi karta) — jaisa reference screenshot mein hai.
         AsyncImage(
             model = "file:///android_asset/img/unlock_level4_badge.webp",
             contentDescription = "Unlock at Level 4",
             contentScale = ContentScale.FillWidth,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.width(128.dp).aspectRatio(600f / 337f)
         )
+        Spacer(Modifier.width(8.dp))
         AsyncImage(
             model = "file:///android_asset/img/rank_level4_badge.webp",
             contentDescription = "Rank, Unlock at Level 4",
             contentScale = ContentScale.FillWidth,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.width(160.dp).aspectRatio(600f / 337f)
         )
     }
 }

@@ -95,7 +95,7 @@ enum class LudoMode { CLASSIC, ARROW, QUICK, MASTER }
 const val GAME_BG_IMG = "file:///android_asset/img/game-bg.webp"
 // Mode-select aur matching screen ka background (asal HTML ke #ludoModeScreen se) —
 // game board wala background isse alag hai (upar GAME_BG_IMG hai).
-const val MODE_SCREEN_BG_IMG = "file:///android_asset/img/game-bg.png"
+const val MODE_SCREEN_BG_IMG = "file:///android_asset/img/ludo_mode_bg.webp"
 const val RANK_1_ICON = "file:///android_asset/img/rank-no-1.webp"
 const val RANK_2_ICON = "file:///android_asset/img/rank-no-2.webp"
 const val GAME_BOARD_IMG = "file:///android_asset/img/Checkerboard-duel7bdc5231556b.png"
