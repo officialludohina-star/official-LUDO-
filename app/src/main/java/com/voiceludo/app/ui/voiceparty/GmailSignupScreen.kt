@@ -88,7 +88,7 @@ fun GmailSignupScreen(navController: NavController) {
                     } else {
                         Text(
                             "${secondsLeft}s",
-                            modifier = Modifier.width(OBTAIN_BTN_WIDTH.dp),
+                            modifier = Modifier.width(84.dp),
                             textAlign = TextAlign.Center,
                             color = Color(0xFF6d756f),
                             fontWeight = FontWeight.Bold,
